@@ -4,6 +4,7 @@ import { useMagnetic } from "../hooks/useMagnetic";
 import { gsap, useGSAP, motionDisabled } from "../lib/gsap";
 import { profile, stats } from "../data/profile";
 import { ArrowRight, ArrowDown, Sparkles } from "./Icons";
+import Billboard from "./Billboard";
 import styles from "./Hero.module.css";
 
 export default function Hero() {
@@ -27,8 +28,33 @@ export default function Hero() {
         .from(q(`.${styles.role}`), { autoAlpha: 0, y: 20, duration: 0.6 }, "-=0.6")
         .from(q(`.${styles.lead}`), { autoAlpha: 0, y: 20, duration: 0.6 }, "-=0.4")
         .from(q(`.${styles.ctas} > *`), { autoAlpha: 0, y: 20, duration: 0.5, stagger: 0.1 }, "-=0.4")
-        .from(q(`.${styles.stat}`), { autoAlpha: 0, y: 24, duration: 0.5, stagger: 0.08 }, "-=0.3")
+        .add("stats", "-=0.3")
+        .from(q(`.${styles.stat}`), { autoAlpha: 0, y: 24, duration: 0.5, stagger: 0.08 }, "stats")
         .from(q(`.${styles.scroll}`), { autoAlpha: 0, duration: 0.6 }, "-=0.2");
+
+      // Count each stat number up from 0 to its target, in sync with the
+      // stats fade-in. Keeps any non-digit prefix/suffix (e.g. the trailing "+").
+      q(`.${styles.statValue}`).forEach((el) => {
+        const m = (el.dataset.value ?? "").match(/^(\D*)(\d+)(\D*)$/);
+        if (!m) return;
+        const [, pre, digits, suf] = m;
+        const end = parseInt(digits, 10);
+        const counter = { v: 0 };
+        el.textContent = `${pre}0${suf}`;
+        tl.to(
+          counter,
+          {
+            v: end,
+            duration: 1.1,
+            ease: "power2.out",
+            snap: { v: 1 },
+            onUpdate: () => {
+              el.textContent = `${pre}${Math.round(counter.v)}${suf}`;
+            },
+          },
+          "stats"
+        );
+      });
     },
     { scope: root }
   );
@@ -37,6 +63,7 @@ export default function Hero() {
 
   return (
     <section ref={root} className={styles.hero} aria-label={profile.name}>
+      <Billboard />
       <div className={`container ${styles.grid}`}>
         <div className={styles.content}>
           <p className={styles.badge}>
@@ -70,7 +97,9 @@ export default function Hero() {
           <dl className={styles.stats}>
             {stats.map((s) => (
               <div key={s.value} className={styles.stat}>
-                <dt className={styles.statValue}>{s.value}</dt>
+                <dt className={styles.statValue} data-value={s.value}>
+                  {s.value}
+                </dt>
                 <dd className={styles.statLabel}>{tr(s.label)}</dd>
               </div>
             ))}

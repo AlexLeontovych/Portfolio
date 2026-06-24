@@ -3,6 +3,7 @@ import { useReveal } from "../hooks/useReveal";
 import { useMagnetic } from "../hooks/useMagnetic";
 import { profile } from "../data/profile";
 import { Mail, Linkedin, Telegram, Github, ArrowUpRight, Pin } from "./Icons";
+import DeployStation from "./DeployStation";
 import styles from "./Contact.module.css";
 
 const socials = [
@@ -18,6 +19,7 @@ export default function Contact() {
 
   return (
     <section id="contact" ref={scope} className="section">
+      <DeployStation />
       <div className="container">
         <div className={styles.wrap} data-reveal>
           <span className="kicker">{t("contact.kicker")}</span>

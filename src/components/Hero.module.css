@@ -32,6 +32,13 @@
   border: 1px solid var(--line-strong);
   margin-bottom: 1.6rem;
 }
+/* On wide screens the neon billboard carries the "open to work" message, so the
+   inline badge is redundant — hide it there (mirrors Billboard's 1600px cutoff). */
+@media (min-width: 1600px) {
+  .badge {
+    display: none;
+  }
+}
 .badge svg {
   color: var(--lime);
 }
@@ -82,27 +89,32 @@
   opacity: 0;
   pointer-events: none;
 }
-.title:hover .titleLine::before {
-  opacity: 0.9;
+/* Glitch fires automatically as a short burst every 2.6s (no hover needed). */
+.titleLine::before {
   color: var(--magenta);
   -webkit-text-fill-color: var(--magenta);
-  animation: glitch-a 0.5s steps(2) infinite;
+  animation: glitch-a 2.6s steps(2) infinite;
 }
-.title:hover .titleLine::after {
-  opacity: 0.9;
+.titleLine::after {
   color: var(--cyan);
   -webkit-text-fill-color: var(--cyan);
-  animation: glitch-b 0.5s steps(2) infinite;
+  animation: glitch-b 2.6s steps(2) infinite;
 }
 @keyframes glitch-a {
-  0% { clip-path: inset(0 0 70% 0); transform: translate(-3px, -2px); }
-  50% { clip-path: inset(40% 0 20% 0); transform: translate(3px, 1px); }
-  100% { clip-path: inset(75% 0 0 0); transform: translate(-2px, 2px); }
+  0%   { opacity: 0.9; clip-path: inset(0 0 70% 0);   transform: translate(-3px, -2px); }
+  6%   { opacity: 0.9; clip-path: inset(40% 0 20% 0); transform: translate(3px, 1px); }
+  12%  { opacity: 0.9; clip-path: inset(75% 0 0 0);   transform: translate(-2px, 2px); }
+  18%  { opacity: 0.9; clip-path: inset(20% 0 55% 0); transform: translate(3px, -1px); }
+  20%  { opacity: 0.9; clip-path: inset(60% 0 15% 0); transform: translate(-3px, 1px); }
+  21%, 100% { opacity: 0; transform: translate(0, 0); }
 }
 @keyframes glitch-b {
-  0% { clip-path: inset(60% 0 10% 0); transform: translate(3px, 1px); }
-  50% { clip-path: inset(10% 0 60% 0); transform: translate(-3px, -1px); }
-  100% { clip-path: inset(30% 0 40% 0); transform: translate(2px, -2px); }
+  0%   { opacity: 0.9; clip-path: inset(60% 0 10% 0); transform: translate(3px, 1px); }
+  6%   { opacity: 0.9; clip-path: inset(10% 0 60% 0); transform: translate(-3px, -1px); }
+  12%  { opacity: 0.9; clip-path: inset(30% 0 40% 0); transform: translate(2px, -2px); }
+  18%  { opacity: 0.9; clip-path: inset(70% 0 5% 0);  transform: translate(-2px, 2px); }
+  20%  { opacity: 0.9; clip-path: inset(15% 0 70% 0); transform: translate(3px, -1px); }
+  21%, 100% { opacity: 0; transform: translate(0, 0); }
 }
 
 .role {

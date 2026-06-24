@@ -79,15 +79,16 @@
 }
 .marquee {
   margin-top: 1rem;
+  padding-block: 0.5rem; /* breathing room so the hover scale isn't clipped */
   overflow: hidden;
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
 .track {
   display: flex;
-  gap: clamp(1.5rem, 5vw, 4rem);
   width: max-content;
   animation: scroll-x 26s linear infinite;
+  will-change: transform;
 }
 .marquee:hover .track {
   animation-play-state: paused;
@@ -96,14 +97,22 @@
   font-family: var(--font-display);
   font-weight: 800;
   font-size: clamp(1.3rem, 3.5vw, 2.4rem);
-  color: transparent;
-  -webkit-text-stroke: 1px var(--line-strong);
-  transition: color var(--t-med), -webkit-text-stroke-color var(--t-med);
+  /* spacing lives on each item (half-gap per side) instead of `gap` on the
+     track, so the duplicated set wraps seamlessly at translateX(-50%) */
+  margin-inline: clamp(0.75rem, 2.5vw, 2rem);
+  /* always bright (was the previous hover look) */
+  color: var(--text);
+  -webkit-text-stroke: 1px var(--cyan);
+  /* paint fill over the stroke so the cyan only edges the outside —
+     keeps the interior a clean, uniform white (no inner "seams") */
+  paint-order: stroke fill;
+  transition: transform var(--t-med), text-shadow var(--t-med);
   white-space: nowrap;
+  cursor: default;
 }
 .brand:hover {
-  color: var(--text);
-  -webkit-text-stroke-color: var(--cyan);
+  transform: scale(1.12);
+  text-shadow: var(--glow-cyan);
 }
 @keyframes scroll-x {
   to {

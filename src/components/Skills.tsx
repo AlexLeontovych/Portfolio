@@ -7,7 +7,7 @@ import { hardSkills, softSkillGroups, aiSkills, education, languages } from "../
 import styles from "./Skills.module.css";
 
 export default function Skills() {
-  const { t, tr } = useI18n();
+  const { t, tr, lang } = useI18n();
   const scope = useReveal<HTMLElement>();
   const bars = useRef<HTMLUListElement>(null);
   const reduced = useReducedMotion();
@@ -32,7 +32,7 @@ export default function Skills() {
         );
       });
     },
-    { scope: bars, dependencies: [reduced] }
+    { scope: bars, dependencies: [reduced, lang] }
   );
 
   return (

@@ -2,6 +2,7 @@ import { useI18n } from "../i18n/I18nContext";
 import { useReveal } from "../hooks/useReveal";
 import type { Localized } from "../data/types";
 import { ArrowUpRight, Download, FileText } from "./Icons";
+import ThanksSign from "./ThanksSign";
 import styles from "./Reference.module.css";
 
 /** The formal job-reference letter (the downloadable PDF stays the English original). */
@@ -62,6 +63,7 @@ export default function Reference() {
 
   return (
     <section id="reference" ref={scope} className="section">
+      <ThanksSign />
       <div className="container">
         <header data-reveal>
           <span className="kicker">{t("reference.kicker")}</span>

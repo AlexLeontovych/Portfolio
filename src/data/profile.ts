@@ -45,7 +45,7 @@ export const stats: { value: string; label: Localized }[] = [
     },
   },
   {
-    value: "~3",
+    value: "3+",
     label: {
       en: "Years in commercial dev",
       ru: "Года в коммерческой разработке",
