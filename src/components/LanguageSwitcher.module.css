@@ -1,0 +1,27 @@
+.switch {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 99px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  gap: 2px;
+}
+
+.opt {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  padding: 0.34em 0.62em;
+  border-radius: 99px;
+  color: var(--muted);
+  transition: color var(--t-fast), background var(--t-fast), box-shadow var(--t-fast);
+}
+.opt:hover {
+  color: var(--text);
+}
+.active {
+  color: #11021f;
+  background: var(--grad-lime);
+  box-shadow: var(--glow-cyan);
+  font-weight: 700;
+}

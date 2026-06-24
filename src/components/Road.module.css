@@ -1,0 +1,54 @@
+.road {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.82;
+}
+
+/* layered strokes: neon edge → asphalt → dashed centre line */
+.edge {
+  fill: none;
+  stroke: rgba(0, 229, 255, 0.22);
+  stroke-width: 76;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 7px rgba(0, 229, 255, 0.28));
+}
+.asphalt {
+  fill: none;
+  stroke: #15112a;
+  stroke-width: 64;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lane {
+  fill: none;
+  stroke: rgba(255, 209, 102, 0.55);
+  stroke-width: 3;
+  stroke-dasharray: 16 22;
+  stroke-linecap: round;
+}
+
+/* the little car */
+.car {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+}
+.body {
+  fill: #ff3b53;
+  stroke: #2a0c14;
+  stroke-width: 1;
+}
+.glass {
+  fill: #0c1830;
+  opacity: 0.9;
+}
+.wheel {
+  fill: #0a0716;
+}
+.light {
+  fill: #fff3c4;
+  filter: drop-shadow(0 0 3px rgba(255, 230, 150, 0.9));
+}

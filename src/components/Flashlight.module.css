@@ -1,0 +1,127 @@
+.root {
+  position: fixed;
+  inset: 0;
+  /* above the nav (100) and its hover states, but below modals/popups (200/300) */
+  z-index: 150;
+  pointer-events: none;
+}
+
+/* Dark mask with a transparent "hole" that reveals the page under the beam.
+   Moved by transform (compositor-cheap) so it stays smooth on mousemove. */
+.beam,
+.warm {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 300vmax;
+  height: 300vmax;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(calc(var(--fx, 50vw) - 150vmax), calc(var(--fy, 40vh) - 150vmax));
+  transition: opacity 0.45s ease;
+  will-change: transform;
+}
+.beam {
+  background: radial-gradient(
+    circle at center,
+    transparent 0,
+    transparent 72px,
+    rgba(8, 2, 22, 0.5) 165px,
+    rgba(8, 2, 22, 0.92) 340px
+  );
+}
+/* warm tint inside the lit circle */
+.warm {
+  background: radial-gradient(circle at center, rgba(255, 214, 140, 0.16) 0, transparent 150px);
+  mix-blend-mode: screen;
+}
+.root[data-on="true"] .beam,
+.root[data-on="true"] .warm {
+  opacity: 1;
+}
+
+/* ---------- the pendant lamp ---------- */
+.lamp {
+  position: fixed;
+  top: 0;
+  right: clamp(1.5rem, 9vw, 7rem);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  line-height: 0;
+}
+.swing {
+  display: block;
+  transform-origin: top center;
+  animation: lampSwing 4.4s ease-in-out infinite;
+}
+.lampOn .swing {
+  animation-duration: 2.7s;
+}
+.still .swing {
+  animation: none;
+}
+@keyframes lampSwing {
+  0%,
+  100% {
+    transform: rotate(-9deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
+}
+
+.svg {
+  height: auto;
+  overflow: visible;
+}
+.cord {
+  stroke: var(--line-strong);
+  stroke-width: 2;
+}
+.ring {
+  fill: none;
+  stroke: var(--muted-2);
+  stroke-width: 3;
+}
+.body {
+  fill: #2a1b4d;
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.stripe {
+  fill: var(--cyan);
+  opacity: 0.85;
+}
+.head {
+  fill: #3a2a5e;
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.lens {
+  fill: var(--muted-2);
+  transition: fill var(--t-med);
+}
+/* lit state — lens glows, whole lamp gets a warm halo */
+.lampOn .lens {
+  fill: var(--amber);
+  filter: drop-shadow(0 0 7px var(--amber));
+}
+.lampOn .svg {
+  filter: drop-shadow(0 8px 22px rgba(255, 184, 0, 0.4));
+}
+.lamp:hover .svg {
+  filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.5));
+}
+.lampOn:hover .svg {
+  filter: drop-shadow(0 8px 22px rgba(255, 184, 0, 0.55));
+}
+
+/* desktop / mouse only — hide the flashlight on phones & tablets */
+@media (max-width: 1024px) {
+  .root {
+    display: none;
+  }
+}

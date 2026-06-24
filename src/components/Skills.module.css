@@ -1,0 +1,170 @@
+/* hard skills | soft skills */
+.topGrid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: start;
+}
+.col {
+  min-width: 0;
+}
+
+.colTitle {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.colTitle::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.groups {
+  display: grid;
+  gap: 1.4rem;
+}
+.group {
+  border-left: 2px solid var(--line-strong);
+  padding-left: 1rem;
+}
+.groupTitle {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 0.7rem;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.skillTag {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.4em 0.85em;
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  transition: transform var(--t-fast) var(--ease-snap), border-color var(--t-fast),
+    box-shadow var(--t-fast), color var(--t-fast);
+}
+.skillTag:hover {
+  transform: translateY(-3px);
+  border-color: var(--magenta);
+  box-shadow: var(--glow-magenta);
+}
+
+/* AI skills */
+.aiBlock {
+  margin-top: clamp(1.8rem, 4.5vw, 3.2rem);
+  padding-top: clamp(1.8rem, 4.5vw, 3.2rem);
+  border-top: 1px solid var(--line);
+}
+.aiBadge {
+  font-family: var(--font-pixel);
+  font-size: 0.55rem;
+  color: #11021f;
+  background: var(--grad-lime);
+  padding: 0.45em 0.55em;
+  border-radius: 6px;
+  box-shadow: var(--glow-cyan);
+}
+.aiGroups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.4rem clamp(1.5rem, 4vw, 3rem);
+}
+
+/* languages | education */
+.infoRow {
+  margin-top: clamp(1.8rem, 4.5vw, 3.2rem);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(1.2rem, 3vw, 2rem);
+  align-items: stretch; /* both panels share the taller block's height */
+}
+.panel {
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: clamp(1.2rem, 3vw, 1.6rem);
+}
+
+/* languages */
+.langs {
+  display: grid;
+  gap: 1rem;
+}
+.langRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.45rem;
+}
+.langName {
+  font-weight: 600;
+}
+.langLevel {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--muted-2);
+}
+.bar {
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 99px;
+  background: var(--grad-lime);
+  box-shadow: var(--glow-cyan);
+}
+
+/* education */
+.edu {
+  display: grid;
+  gap: 1.1rem;
+}
+.eduItem {
+  display: grid;
+  gap: 0.2rem;
+}
+.eduPeriod {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--lime);
+}
+.eduDegree {
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+}
+.eduInst {
+  font-size: 0.85rem;
+  color: var(--muted-2);
+}
+
+@media (max-width: 820px) {
+  .topGrid {
+    grid-template-columns: 1fr;
+  }
+  .aiGroups {
+    grid-template-columns: 1fr;
+  }
+  .infoRow {
+    grid-template-columns: 1fr;
+  }
+}

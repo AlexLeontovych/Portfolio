@@ -1,0 +1,66 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write      # needed to commit auto-generated screenshots back to the repo
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment, cancel in-progress runs of this workflow.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Auto-generate any missing project screenshots into public/shots/ ---
+      # Fills only the gaps for works.json + works.custom.json (committed projects).
+      # New projects added in the admin must be exported to works.custom.json and
+      # committed first — localStorage-only projects aren't in the repo for CI to see.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install Pillow
+      - name: Generate missing screenshots
+        run: python scripts/fetch_shots.py
+      - name: Commit generated screenshots
+        run: |
+          if [ -n "$(git status --porcelain public/shots src/data/works.json src/data/works.custom.json)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/shots src/data/works.json src/data/works.custom.json
+            git commit -m "chore: auto-generate project screenshots [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "No new screenshots to commit."
+          fi
+
+      # --- Build & deploy ---
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

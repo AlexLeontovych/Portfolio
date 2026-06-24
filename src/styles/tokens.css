@@ -1,0 +1,75 @@
+:root {
+  /* ---- palette: Cyber Arcade ---- */
+  --bg: #0d0221;
+  --bg-1: #120532;
+  --bg-2: #1a0a3d;
+  /* opaque equivalents of a faint white tint over --bg, so the scrolling road
+     stays hidden behind content panels instead of bleeding through them */
+  --panel: #150c2b;
+  --panel-strong: #1d1338;
+  --line: rgba(170, 130, 255, 0.16);
+  --line-strong: rgba(170, 130, 255, 0.32);
+
+  --magenta: #ff2e88;
+  --cyan: #00e5ff;
+  --lime: #aaff00;
+  --violet: #a855f7;
+  --amber: #ffb800;
+
+  --text: #f3ecff;
+  --muted: #b6a6da;
+  --muted-2: #9a8ac4;
+
+  /* gradients */
+  --grad-main: linear-gradient(120deg, var(--magenta), var(--violet) 45%, var(--cyan));
+  --grad-lime: linear-gradient(120deg, var(--lime), var(--cyan));
+  --grad-text: linear-gradient(100deg, #fff 0%, var(--cyan) 40%, var(--magenta) 80%);
+
+  /* glow */
+  --glow-magenta: 0 0 24px rgba(255, 46, 136, 0.45);
+  --glow-cyan: 0 0 24px rgba(0, 229, 255, 0.4);
+  --glow-lime: 0 0 22px rgba(170, 255, 0, 0.4);
+
+  /* fonts */
+  --font-display: "Exo 2", system-ui, sans-serif;
+  --font-body: "Rubik", system-ui, sans-serif;
+  --font-pixel: "Press Start 2P", "Exo 2", monospace;
+  --font-mono: "Share Tech Mono", ui-monospace, monospace;
+
+  /* layout */
+  --maxw: 1200px;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 26px;
+  --gutter: clamp(1rem, 4vw, 3rem);
+  --section-y: clamp(4rem, 9vw, 8rem);
+
+  /* motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap: cubic-bezier(0.5, 1.6, 0.4, 1);
+  --t-fast: 0.18s;
+  --t-med: 0.35s;
+
+  --header-h: 68px;
+}
+
+/* Motion toggle: when reduced, kill transitions/animations globally. */
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

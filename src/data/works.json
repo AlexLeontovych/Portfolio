@@ -1,0 +1,1089 @@
+[
+  {
+    "id": "perion-133942",
+    "url": "https://demo.perion.com/creative/133942",
+    "title": "SVG Animation #133942",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "SVG",
+    "complexity": 5,
+    "tags": [
+      "SVG",
+      "Carousel"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-133942.jpg",
+    "brand": "Activia"
+  },
+  {
+    "id": "amigo-gaming-2",
+    "url": "https://amigogaming.com/ru/games/football-hits#demoStart",
+    "title": "Football Hits — Slot Game",
+    "company": "Amigo Gaming",
+    "platform": "Amigo Gaming",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Slot Game"
+    ],
+    "favourite": true,
+    "thumb": "./shots/amigo-gaming-2.jpg"
+  },
+  {
+    "id": "practicu-4",
+    "url": "https://angular.practicu.com/",
+    "title": "Angular Learning Platform",
+    "company": "ANVI",
+    "platform": "Practicu",
+    "kind": "Site",
+    "complexity": 5,
+    "tags": [
+      "Retail / API",
+      "Other",
+      "Site"
+    ],
+    "favourite": true,
+    "thumb": "./shots/practicu-4.jpg"
+  },
+  {
+    "id": "newt-5",
+    "url": "https://newt.co.il/",
+    "title": "Newt — Retail Store",
+    "company": "ANVI",
+    "platform": "Newt",
+    "kind": "Retail",
+    "complexity": 5,
+    "tags": [
+      "Retail / API",
+      "Site"
+    ],
+    "favourite": true,
+    "thumb": "./shots/newt-5.jpg"
+  },
+  {
+    "id": "sparkflow-137339",
+    "url": "https://admin.sparkflow.net/demo/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEzNzMzOSJ9.a1qW1uV18D5R3Zp872ZW5ztOn5wNA2C0yshLitCioBs&device_group=desktop&device=macbook-air&rotated=false",
+    "title": "Interactive Game #137339",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Game",
+      "Sounds",
+      "Animation"
+    ],
+    "favourite": true,
+    "thumb": "./shots/sparkflow-137339.jpg"
+  },
+  {
+    "id": "perion-98278",
+    "url": "https://demo.perion.com/creative/98278",
+    "title": "Interactive Game #98278",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Game",
+      "Animation"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-98278.jpg"
+  },
+  {
+    "id": "perion-122840",
+    "url": "https://demo.perion.com/creative/122840",
+    "title": "Interactive Game #122840",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Carousel",
+      "Animation",
+      "Game"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-122840.jpg"
+  },
+  {
+    "id": "undertone-138003",
+    "url": "https://su-p.undertone.com/138003",
+    "title": "SVG Animation #138003",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "SVG",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "SVG",
+      "Other",
+      "Carousel"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-138003.jpg"
+  },
+  {
+    "id": "perion-121266",
+    "url": "https://demo.perion.com/creative/121266",
+    "title": "SVG Animation #121266",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "SVG",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "SVG"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-121266.jpg"
+  },
+  {
+    "id": "undertone-136523",
+    "url": "https://su-p.undertone.com/136523",
+    "title": "SVG Animation #136523",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "SVG",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "SVG"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-136523.jpg"
+  },
+  {
+    "id": "undertone-118116",
+    "url": "https://su-p.undertone.com/118116",
+    "title": "Interactive Game #118116",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "SVG",
+      "Game",
+      "Other"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-118116.jpg"
+  },
+  {
+    "id": "perion-123932",
+    "url": "https://demo.perion.com/creative/123932",
+    "title": "SVG Animation #123932",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "SVG",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "Other",
+      "SVG"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-123932.jpg"
+  },
+  {
+    "id": "undertone-124643",
+    "url": "https://su-p.undertone.com/124643",
+    "title": "AI Creative #124643",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "AI",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "SVG",
+      "AI",
+      "Expandable"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-124643.jpg"
+  },
+  {
+    "id": "perion-137339",
+    "url": "https://demo.perion.com/creative/137339",
+    "title": "Interactive Game #137339",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "Game",
+      "Other",
+      "Sounds"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-137339.jpg"
+  },
+  {
+    "id": "undertone-122318",
+    "url": "https://su-p.undertone.com/122318",
+    "title": "Interactive Game #122318",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "Game",
+      "Other"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-122318.jpg"
+  },
+  {
+    "id": "undertone-84313",
+    "url": "https://su-p.undertone.com/84313",
+    "title": "Interactive Game #84313",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "Game",
+      "Other"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-84313.jpg"
+  },
+  {
+    "id": "undertone-110706",
+    "url": "https://su-p.undertone.com/110706",
+    "title": "Interactive Game #110706",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "Game"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-110706.jpg"
+  },
+  {
+    "id": "undertone-120795",
+    "url": "https://su-p.undertone.com/120795",
+    "title": "Interactive Game #120795",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Animation",
+      "Game"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-120795.jpg"
+  },
+  {
+    "id": "perion-131699",
+    "url": "https://demo.perion.com/creative/131699",
+    "title": "Animated Creative #131699",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 4,
+    "tags": [
+      "Expandable",
+      "Animation",
+      "Hover FX"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-131699.jpg"
+  },
+  {
+    "id": "undertone-136283",
+    "url": "https://su-p.undertone.com/136283",
+    "title": "SVG Animation #136283",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "SVG",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "SVG",
+      "Carousel"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-136283.jpg"
+  },
+  {
+    "id": "perion-125021",
+    "url": "https://demo.perion.com/creative/125021",
+    "title": "Retail Experience #125021",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Retail",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Retail / API",
+      "Carousel"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-125021.jpg"
+  },
+  {
+    "id": "sparkflow-135016",
+    "url": "https://admin.sparkflow.net/d/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEzNTAxNiJ9.Eog6lFScSnJ1cs0eZi9OtWTYF5OVimBZAJtsWRc6U6I&device=full-screen&zoom=1&sf_ut_zip_code=10001&sf_ut_latitude=11&sf_ut_longitude=11",
+    "title": "Retail Experience #135016",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "Retail",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Retail / API",
+      "Carousel"
+    ],
+    "favourite": true,
+    "thumb": "./shots/sparkflow-135016.jpg"
+  },
+  {
+    "id": "perion-121439",
+    "url": "https://demo.perion.com/creative/121439",
+    "title": "Animated Creative #121439",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Other"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-121439.jpg",
+    "brand": "IBM"
+  },
+  {
+    "id": "sparkflow-129923",
+    "url": "https://admin.sparkflow.net/d/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEyOTkyMyJ9.u-lOkMbQmd2Gsq-cQNwVO1I2pm41o7jzsGN11EnA1CA&device=full-screen&zoom=1",
+    "title": "Animated Creative #129923",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "Animation",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Other",
+      "Hover FX"
+    ],
+    "favourite": true,
+    "thumb": "./shots/sparkflow-129923.jpg"
+  },
+  {
+    "id": "perion-123613",
+    "url": "https://demo.perion.com/creative/123613",
+    "title": "Carousel Creative #123613",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Carousel",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Other",
+      "Carousel"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-123613.jpg",
+    "brand": "Stop & Shop"
+  },
+  {
+    "id": "undertone-138587",
+    "url": "https://su-p.undertone.com/138587",
+    "title": "Carousel Creative #138587",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Carousel",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Other",
+      "Carousel"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-138587.jpg"
+  },
+  {
+    "id": "undertone-134812",
+    "url": "https://su-p.undertone.com/134812",
+    "title": "Carousel Creative #134812",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Carousel",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Other",
+      "Carousel"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-134812.jpg"
+  },
+  {
+    "id": "sparkflow-136474",
+    "url": "https://admin.sparkflow.net/demo/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEzNjQ3NCJ9.KAQTn_GpgIsJ_mWDpDBCgUbeTWW2wW36QLl-8KFLLoA&device_group=mobile&device=iphone-15&rotated=false",
+    "title": "Animated Creative #136474",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "Animation",
+    "complexity": 4,
+    "tags": [
+      "Animation"
+    ],
+    "favourite": true,
+    "thumb": "./shots/sparkflow-136474.jpg"
+  },
+  {
+    "id": "undertone-138831",
+    "url": "https://su-p.undertone.com/138831",
+    "title": "Interactive Game #138831",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Game",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Game",
+      "Other",
+      "Hotspots"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-138831.jpg"
+  },
+  {
+    "id": "sparkflow-130627",
+    "url": "https://admin.sparkflow.net/d/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEzMDYyNyJ9.0jpCZywB2twyiq6vsuRbBgi45FXdWSBZJyThNURSHQ4&device=full-screen&zoom=1",
+    "title": "Interactive Game #130627",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "Game",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Game"
+    ],
+    "favourite": true,
+    "thumb": "./shots/sparkflow-130627.jpg"
+  },
+  {
+    "id": "undertone-88908",
+    "url": "https://su-p.undertone.com/88908",
+    "title": "Interactive Game #88908",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Game",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Game"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-88908.jpg"
+  },
+  {
+    "id": "perion-136779",
+    "url": "https://demo.perion.com/creative/136779",
+    "title": "Carousel Creative #136779",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Carousel",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Carousel",
+      "Expandable"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-136779.jpg"
+  },
+  {
+    "id": "perion-134563",
+    "url": "https://demo.perion.com/creative/134563",
+    "title": "SVG Animation #134563",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "SVG",
+    "complexity": 3,
+    "tags": [
+      "SVG",
+      "Animation",
+      "Hover FX"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-134563.jpg"
+  },
+  {
+    "id": "undertone-136165",
+    "url": "https://su-p.undertone.com/136165",
+    "title": "3D Experience #136165",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "3D",
+    "complexity": 3,
+    "tags": [
+      "Animation",
+      "Other",
+      "3D"
+    ],
+    "favourite": true,
+    "thumb": "./shots/undertone-136165.jpg"
+  },
+  {
+    "id": "perion-131889",
+    "url": "https://demo.perion.com/creative/131889",
+    "title": "Animated Creative #131889",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 3,
+    "tags": [
+      "Animation"
+    ],
+    "favourite": true,
+    "thumb": "./shots/perion-131889.jpg"
+  },
+  {
+    "id": "webelefont-3",
+    "url": "https://webelefont.github.io/toytherapy_room",
+    "title": "Toy Therapy Room",
+    "company": "WebElefont",
+    "platform": "WebElefont",
+    "kind": "Site",
+    "complexity": 5,
+    "tags": [
+      "Site"
+    ],
+    "favourite": false,
+    "thumb": "./shots/webelefont-3.jpg"
+  },
+  {
+    "id": "perion-121987",
+    "url": "https://demo.perion.com/creative/121987",
+    "title": "Interactive Game #121987",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Game",
+      "Animation",
+      "Other",
+      "Expandable"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-121987.jpg"
+  },
+  {
+    "id": "sparkflow-112414",
+    "url": "https://admin.sparkflow.net/d/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjExMjQxNCJ9.p3JqnZ1oi_tqogslvEBBRh_DJlmtXqPY6Z8DUC2Moyk&device=full-screen&zoom=1&sf_ut_zip_code=10001&sf_ut_latitude=11&sf_ut_longitude=11",
+    "title": "Retail Experience #112414",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "Retail",
+    "complexity": 4,
+    "tags": [
+      "Retail / API",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/sparkflow-112414.jpg"
+  },
+  {
+    "id": "perion-134376",
+    "url": "https://demo.perion.com/creative/134376",
+    "title": "Retail Experience #134376",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Retail",
+    "complexity": 4,
+    "tags": [
+      "Retail / API",
+      "Animation",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-134376.jpg"
+  },
+  {
+    "id": "sparkflow-127391",
+    "url": "https://admin.sparkflow.net/d/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEyNzM5MSIsImZvcm1hdCI6IjIzMCJ9.rBDfp8CG0MssXMBWsITbvNQ_ElFZikP-i43ZvY5x6iw&device=full-screen&zoom=1&sf_ut_zip_code=10001&sf_ut_latitude=11&sf_ut_longitude=11",
+    "title": "Retail Experience #127391",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "Retail",
+    "complexity": 4,
+    "tags": [
+      "Retail / API",
+      "Animation",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/sparkflow-127391.jpg"
+  },
+  {
+    "id": "perion-137340",
+    "url": "https://demo.perion.com/creative/137340",
+    "title": "Interactive Game #137340",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Game",
+    "complexity": 4,
+    "tags": [
+      "Game",
+      "Animation"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-137340.jpg"
+  },
+  {
+    "id": "perion-125315",
+    "url": "https://demo.perion.com/creative/125315",
+    "title": "Interactive Game #125315",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Game",
+    "complexity": 4,
+    "tags": [
+      "Game"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-125315.jpg"
+  },
+  {
+    "id": "undertone-138392",
+    "url": "https://su-p.undertone.com/138392",
+    "title": "Retail Experience #138392",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Retail",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Retail / API",
+      "Carousel",
+      "Hover FX"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-138392.jpg"
+  },
+  {
+    "id": "undertone-139158",
+    "url": "https://su-p.undertone.com/139158",
+    "title": "Retail Experience #139158",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Retail",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Retail / API",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-139158.jpg"
+  },
+  {
+    "id": "perion-138513",
+    "url": "https://demo.perion.com/creative/138513",
+    "title": "Carousel Creative #138513",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Carousel",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Other",
+      "Carousel",
+      "Hotspots"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-138513.jpg",
+    "brand": "Brown-Forman"
+  },
+  {
+    "id": "undertone-134870",
+    "url": "https://su-p.undertone.com/134870",
+    "title": "Interactive Game #134870",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Game",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Game"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-134870.jpg"
+  },
+  {
+    "id": "sparkflow-134367",
+    "url": "https://admin.sparkflow.net/d/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEzNDM2NyJ9.2ohWH6ptCN49TwNDkgWP096IYXAxULuDwxPzM37v9dc&device=full-screen&zoom=1",
+    "title": "Carousel Creative #134367",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "Carousel",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Carousel",
+      "Hotspots"
+    ],
+    "favourite": false,
+    "thumb": "./shots/sparkflow-134367.jpg"
+  },
+  {
+    "id": "perion-134038",
+    "url": "https://demo.perion.com/creative/134038",
+    "title": "Carousel Creative #134038",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Carousel",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-134038.jpg"
+  },
+  {
+    "id": "undertone-126182",
+    "url": "https://su-p.undertone.com/126182",
+    "title": "Carousel Creative #126182",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Carousel",
+    "complexity": 4,
+    "tags": [
+      "Animation",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-126182.jpg"
+  },
+  {
+    "id": "perion-135534",
+    "url": "https://demo.perion.com/creative/135534",
+    "title": "SVG Animation #135534",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "SVG",
+    "complexity": 3,
+    "tags": [
+      "SVG"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-135534.jpg"
+  },
+  {
+    "id": "perion-83666",
+    "url": "https://demo.perion.com/creative/83666",
+    "title": "Interactive Creative #83666",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Misc",
+    "complexity": 3,
+    "tags": [
+      "Other"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-83666.jpg"
+  },
+  {
+    "id": "perion-130608",
+    "url": "https://demo.perion.com/creative/130608",
+    "title": "SVG Animation #130608",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "SVG",
+    "complexity": 3,
+    "tags": [
+      "Animation",
+      "SVG",
+      "Hover FX"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-130608.jpg"
+  },
+  {
+    "id": "undertone-138974",
+    "url": "https://su-p.undertone.com/138974",
+    "title": "SVG Animation #138974",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "SVG",
+    "complexity": 3,
+    "tags": [
+      "Animation",
+      "SVG",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-138974.jpg"
+  },
+  {
+    "id": "undertone-139118",
+    "url": "https://su-p.undertone.com/139118",
+    "title": "Retail Experience #139118",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Retail",
+    "complexity": 3,
+    "tags": [
+      "Animation",
+      "Retail / API",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-139118.jpg"
+  },
+  {
+    "id": "undertone-138545",
+    "url": "https://su-p.undertone.com/138545",
+    "title": "Retail Experience #138545",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Retail",
+    "complexity": 3,
+    "tags": [
+      "Animation",
+      "Retail / API"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-138545.jpg"
+  },
+  {
+    "id": "sparkflow-127962",
+    "url": "https://admin.sparkflow.net/d/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEyNzk2MiJ9.8jA6PRmXCNIWWE73ytd_zMOVGmEOmpwmurnxKbhYlaM&device=full-screen&zoom=1",
+    "title": "Interactive Game #127962",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "Game",
+    "complexity": 3,
+    "tags": [
+      "Animation",
+      "Other",
+      "Game"
+    ],
+    "favourite": false,
+    "thumb": "./shots/sparkflow-127962.jpg"
+  },
+  {
+    "id": "undertone-138586",
+    "url": "https://su-p.undertone.com/138586",
+    "title": "Carousel Creative #138586",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Carousel",
+    "complexity": 3,
+    "tags": [
+      "Animation",
+      "Other",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-138586.jpg"
+  },
+  {
+    "id": "perion-136715",
+    "url": "https://demo.perion.com/creative/136715",
+    "title": "Animated Creative #136715",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 3,
+    "tags": [
+      "Animation",
+      "Other"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-136715.jpg",
+    "brand": "Coca-Cola"
+  },
+  {
+    "id": "perion-123581",
+    "url": "https://demo.perion.com/creative/123581",
+    "title": "Carousel Creative #123581",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Carousel",
+    "complexity": 3,
+    "tags": [
+      "Animation",
+      "Carousel",
+      "Hover FX"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-123581.jpg"
+  },
+  {
+    "id": "perion-84470",
+    "url": "https://demo.perion.com/creative/84470",
+    "title": "Animated Creative #84470",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 3,
+    "tags": [
+      "Animation"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-84470.jpg"
+  },
+  {
+    "id": "perion-118202",
+    "url": "https://demo.perion.com/creative/118202",
+    "title": "Animated Creative #118202",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 3,
+    "tags": [
+      "Animation"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-118202.jpg"
+  },
+  {
+    "id": "perion-118875",
+    "url": "https://demo.perion.com/creative/118875",
+    "title": "SVG Animation #118875",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "SVG",
+    "complexity": 2,
+    "tags": [
+      "SVG"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-118875.jpg"
+  },
+  {
+    "id": "perion-139117",
+    "url": "https://demo.perion.com/creative/139117",
+    "title": "SVG Animation #139117",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "SVG",
+    "complexity": 2,
+    "tags": [
+      "Animation",
+      "SVG",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-139117.jpg"
+  },
+  {
+    "id": "sparkflow-133337",
+    "url": "https://admin.sparkflow.net/d/?d=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjEzMzMzNyJ9.kZDlFOE6k0qiZTjiwyZG0MenwVZEV5yikPc-y2XuWAo&device=full-screen&zoom=1",
+    "title": "SVG Animation #133337",
+    "company": "Perion",
+    "platform": "Sparkflow",
+    "kind": "SVG",
+    "complexity": 2,
+    "tags": [
+      "Animation",
+      "SVG"
+    ],
+    "favourite": false,
+    "thumb": "./shots/sparkflow-133337.jpg"
+  },
+  {
+    "id": "perion-120930",
+    "url": "https://demo.perion.com/creative/120930",
+    "title": "Animated Creative #120930",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 2,
+    "tags": [
+      "Animation",
+      "Expandable"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-120930.jpg"
+  },
+  {
+    "id": "undertone-104187",
+    "url": "https://su-p.undertone.com/104187",
+    "title": "Carousel Creative #104187",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Carousel",
+    "complexity": 2,
+    "tags": [
+      "Animation",
+      "Carousel"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-104187.jpg"
+  },
+  {
+    "id": "perion-122676",
+    "url": "https://demo.perion.com/creative/122676",
+    "title": "Animated Creative #122676",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 2,
+    "tags": [
+      "Animation"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-122676.jpg"
+  },
+  {
+    "id": "perion-131954",
+    "url": "https://demo.perion.com/creative/131954",
+    "title": "Animated Creative #131954",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 1,
+    "tags": [
+      "Animation"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-131954.jpg",
+    "brand": "McDonald's"
+  },
+  {
+    "id": "perion-125381",
+    "url": "https://demo.perion.com/creative/125381",
+    "title": "Animated Creative #125381",
+    "company": "Perion",
+    "platform": "Perion",
+    "kind": "Animation",
+    "complexity": 1,
+    "tags": [
+      "Animation"
+    ],
+    "favourite": false,
+    "thumb": "./shots/perion-125381.jpg",
+    "brand": "Intel"
+  },
+  {
+    "id": "undertone-135636",
+    "url": "https://su-p.undertone.com/135636",
+    "title": "Animated Creative #135636",
+    "company": "Perion",
+    "platform": "Undertone",
+    "kind": "Animation",
+    "complexity": 1,
+    "tags": [
+      "Animation"
+    ],
+    "favourite": false,
+    "thumb": "./shots/undertone-135636.jpg"
+  }
+]

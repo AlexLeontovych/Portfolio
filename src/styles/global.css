@@ -1,0 +1,234 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--header-h);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  font-size: clamp(15px, 1vw + 13px, 17px);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* fixed cosmic backdrop layer is painted by <Background/>, body just sets base */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(60% 50% at 15% 0%, rgba(168, 85, 247, 0.18), transparent 60%),
+    radial-gradient(55% 45% at 90% 10%, rgba(0, 229, 255, 0.12), transparent 60%),
+    radial-gradient(50% 50% at 50% 100%, rgba(255, 46, 136, 0.1), transparent 60%),
+    var(--bg);
+}
+
+img,
+svg,
+iframe {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--magenta);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* scrollbar */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-1);
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--violet), var(--magenta));
+  border-radius: 99px;
+  border: 2px solid var(--bg-1);
+}
+
+/* ---------- layout helpers ---------- */
+.container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.section {
+  position: relative;
+  padding-block: var(--section-y);
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7em;
+}
+.kicker::before {
+  content: "";
+  width: 28px;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.section-title {
+  font-size: clamp(2rem, 5.5vw, 3.6rem);
+  margin-top: 0.6rem;
+  margin-bottom: clamp(2rem, 5vw, 3.4rem);
+}
+
+.gradient-text {
+  background: var(--grad-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* generic neon chip / tag */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em 0.7em;
+  border-radius: 99px;
+  font-size: 0.74rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+/* primary / ghost buttons */
+.btn {
+  --btn-bg: var(--grad-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  padding: 0.85em 1.5em;
+  border-radius: 99px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  color: #11021f;
+  background: var(--btn-bg);
+  transition: transform var(--t-fast) var(--ease-snap), box-shadow var(--t-med);
+  will-change: transform;
+}
+.btn:hover {
+  box-shadow: var(--glow-magenta);
+  transform: translateY(-2px);
+}
+.btn--ghost {
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+}
+.btn--ghost:hover {
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 50%;
+  top: -60px;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: var(--cyan);
+  color: #04121a;
+  padding: 0.6em 1.2em;
+  border-radius: 0 0 12px 12px;
+  font-weight: 700;
+  transition: top var(--t-med);
+}
+.skip-link:focus {
+  top: 0;
+}
+
+/* keep page content above the decorative scrolling Road (z-index: 0) */
+#main,
+footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* Scroll-reveal is JS-driven: useReveal() animates [data-reveal] elements from
+   hidden→shown with GSAP and rebuilds on language/motion changes. Elements stay
+   visible by default, so if GSAP ever fails to load the content still appears. */

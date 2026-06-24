@@ -1,0 +1,91 @@
+.letter {
+  position: relative;
+  max-width: 760px;
+  margin: clamp(1.6rem, 4vw, 2.4rem) auto 0;
+  padding: clamp(1.6rem, 5vw, 3rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+}
+/* neon spine, like a sealed letter edge */
+.letter::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--magenta), var(--violet), var(--cyan));
+}
+
+.letterHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.6rem;
+}
+.docIcon {
+  width: 28px;
+  height: 28px;
+  color: var(--cyan);
+}
+.date {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.salutation {
+  margin: 0 0 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.para {
+  margin: 0 0 1.1rem;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+.signoff {
+  margin: 1.6rem 0 0.5rem;
+  color: var(--text);
+}
+.signer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+}
+.signerName {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  font-weight: 700;
+  color: var(--text);
+  transition: color var(--t-fast);
+}
+.signerName:hover {
+  color: var(--magenta);
+}
+.signerTitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.signerEmail {
+  width: fit-content;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--cyan);
+  transition: color var(--t-fast);
+}
+.signerEmail:hover {
+  color: var(--magenta);
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(1.4rem, 4vw, 2rem);
+}

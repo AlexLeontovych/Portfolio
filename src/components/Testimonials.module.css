@@ -1,0 +1,215 @@
+.carousel {
+  margin-top: clamp(1.6rem, 4vw, 2.6rem);
+}
+
+.viewport {
+  overflow: hidden;
+  border-radius: var(--radius);
+  touch-action: pan-y;
+}
+
+.track {
+  display: flex;
+  transition: transform 0.6s var(--ease-out);
+}
+
+.slide {
+  flex: 0 0 100%;
+  min-width: 100%;
+  display: flex;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  width: 100%;
+  margin: 0;
+  padding: clamp(1.4rem, 4vw, 2.6rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color var(--t-med), transform var(--t-med), box-shadow var(--t-med);
+}
+.card:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-3px);
+  box-shadow: 0 24px 60px -42px rgba(255, 46, 136, 0.55);
+}
+.card:focus-visible {
+  outline: 2px solid var(--magenta);
+  outline-offset: 3px;
+}
+.card::before {
+  /* faint neon wash in the corner */
+  content: "";
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(255, 46, 136, 0.16), transparent 70%);
+  pointer-events: none;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.quoteMark {
+  width: 40px;
+  height: 40px;
+  color: var(--magenta);
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+.relation {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cyan);
+  border: 1px solid var(--line-strong);
+  border-radius: 99px;
+  padding: 0.32em 0.8em;
+  white-space: nowrap;
+}
+
+.quote {
+  margin: 0;
+  font-size: clamp(0.96rem, 1.6vw, 1.12rem);
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: auto;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  color: #11021f;
+}
+
+.personText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.name {
+  font-weight: 700;
+  color: var(--text);
+}
+.role {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  padding-left: 0.8rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.extLink {
+  color: var(--muted);
+  opacity: 0.55;
+  transition: color var(--t-fast), opacity var(--t-fast), transform var(--t-fast);
+}
+.card:hover .extLink {
+  color: var(--magenta);
+  opacity: 1;
+  transform: translate(2px, -2px);
+}
+.card:hover .name {
+  color: var(--magenta);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  margin-top: 1.4rem;
+}
+
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast), transform var(--t-fast),
+    box-shadow var(--t-fast);
+}
+.arrow:hover {
+  border-color: var(--magenta);
+  color: var(--magenta);
+  transform: translateY(-2px);
+  box-shadow: var(--glow-magenta);
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: none;
+  border-radius: 99px;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: width var(--t-med) var(--ease-out), background var(--t-fast);
+}
+.dot:hover {
+  background: var(--muted);
+}
+.dotOn {
+  width: 26px;
+  background: linear-gradient(90deg, var(--magenta), var(--violet));
+}
+
+@media (max-width: 560px) {
+  .person {
+    flex-wrap: wrap;
+  }
+  .meta {
+    margin-left: 0;
+    padding-left: 0;
+    width: 100%;
+  }
+}

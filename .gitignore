@@ -1,0 +1,31 @@
+# dependencies
+node_modules
+
+# build output
+dist
+dist-ssr
+*.local
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# editor / tooling (local, machine-specific)
+.vscode/*
+!.vscode/extensions.json
+.idea
+.claude/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# python
+__pycache__
+*.pyc
+
+# logs
+*.log
+
+# env
+.env
+.env.*
