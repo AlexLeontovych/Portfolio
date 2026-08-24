@@ -32,9 +32,11 @@
   stroke-linecap: round;
 }
 
-/* the little car */
+/* the little car (clickable — opens the arcade game) */
 .car {
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+  pointer-events: auto;
+  cursor: pointer;
 }
 .body {
   fill: #ff3b53;

@@ -1,0 +1,242 @@
+/* ---------- floating launch button ---------- */
+
+/* quiet by design: sits with the page chrome, only wakes up on hover */
+.launch {
+  position: fixed;
+  left: clamp(0.9rem, 2.5vw, 1.8rem);
+  bottom: 1.1rem;
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(21, 12, 43, 0.72);
+  color: var(--muted);
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: color var(--t-med), border-color var(--t-med), box-shadow var(--t-med),
+    transform var(--t-fast);
+}
+.launch:hover,
+.launch:focus-visible {
+  border-color: var(--magenta);
+  color: var(--text);
+  box-shadow: var(--glow-magenta);
+  transform: translateY(-2px);
+}
+.launchIcon {
+  flex: none;
+}
+
+/* ---------- full-screen game overlay ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: var(--bg);
+}
+.overlay:focus {
+  outline: none;
+}
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: rgba(21, 12, 43, 0.8);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.close:hover,
+.close:focus-visible {
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+/* camera (chase / cockpit) toggle, stacked under the close button —
+   quiet by design: muted line icon, no glow until interacted with */
+.view {
+  position: absolute;
+  top: calc(0.9rem + 52px);
+  right: 0.9rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(21, 12, 43, 0.65);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+.view:hover,
+.view:focus-visible {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+/* tilt-steering toggle (touch devices), stacked under the camera button */
+.tilt {
+  position: absolute;
+  top: calc(0.9rem + 104px);
+  right: 0.9rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(21, 12, 43, 0.65);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+.tilt:hover,
+.tilt:focus-visible {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.tiltOn {
+  border-color: var(--lime);
+  color: var(--lime);
+}
+
+/* ---------- ready screen (informational, clicks fall through) ---------- */
+
+.ready {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 1rem;
+  text-align: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(13, 2, 33, 0.25), rgba(13, 2, 33, 0.72));
+}
+.title {
+  font-family: var(--font-pixel);
+  font-size: clamp(1.6rem, 5.5vw, 3.2rem);
+  background: var(--grad-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 18px rgba(255, 46, 136, 0.55));
+}
+.tagline {
+  color: var(--muted);
+  font-size: clamp(0.85rem, 2vw, 1.05rem);
+}
+.blink {
+  font-family: var(--font-pixel);
+  font-size: clamp(0.62rem, 1.7vw, 0.85rem);
+  color: var(--cyan);
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.7);
+  animation: arcade-blink 1.15s steps(2, jump-none) infinite;
+}
+@keyframes arcade-blink {
+  50% {
+    opacity: 0.15;
+  }
+}
+.controls {
+  color: var(--muted-2);
+  font-family: var(--font-mono);
+  font-size: clamp(0.78rem, 1.8vw, 0.95rem);
+}
+
+/* ---------- game-over panel ---------- */
+
+.overWrap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(13, 2, 33, 0.55);
+}
+.overCard {
+  width: min(430px, 94vw);
+  padding: 2rem 1.6rem;
+  text-align: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--panel-strong);
+  box-shadow: 0 0 44px rgba(255, 46, 136, 0.22);
+}
+.overTitle {
+  font-family: var(--font-pixel);
+  font-size: clamp(1.05rem, 3.4vw, 1.5rem);
+  color: var(--magenta);
+  text-shadow: 0 0 16px rgba(255, 46, 136, 0.6);
+  margin-bottom: 0.9rem;
+}
+.record {
+  font-family: var(--font-pixel);
+  font-size: 0.62rem;
+  color: var(--lime);
+  text-shadow: 0 0 10px rgba(170, 255, 0, 0.6);
+  margin-bottom: 0.9rem;
+  animation: arcade-blink 1s steps(2, jump-none) infinite;
+}
+.results {
+  display: flex;
+  justify-content: center;
+  gap: 2.2rem;
+  margin-bottom: 1.4rem;
+}
+.results dt {
+  color: var(--muted-2);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.3rem;
+}
+.results dd {
+  font-family: var(--font-pixel);
+  font-size: 1.15rem;
+  color: var(--text);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+}
+.again {
+  box-shadow: var(--glow-magenta);
+}
+
+@media (max-width: 640px) {
+  .launchText {
+    display: none;
+  }
+  .launch {
+    padding: 0.62rem 0.72rem;
+  }
+}

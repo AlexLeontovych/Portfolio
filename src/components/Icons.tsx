@@ -12,6 +12,27 @@ const base = (props: SVGProps<SVGSVGElement>) => ({
   ...props,
 });
 
+export const Gamepad = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M6 11h4M8 9v4M15 12h.01M18 10h.01" />
+    <path d="M17.3 5H6.7a4 4 0 0 0-4 3.6C2.6 9.4 2 14.5 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.4-1.4a2 2 0 0 1 1.4-.6h4.4a2 2 0 0 1 1.4.6L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.5-.6-6.6-.7-7.4a4 4 0 0 0-4-3.6z" />
+  </svg>
+);
+
+export const Videocam = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <rect x="2" y="6" width="13" height="12" rx="2" />
+    <path d="m15 10 7-3v10l-7-3" />
+  </svg>
+);
+
+export const Smartphone = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <rect x="7" y="2" width="10" height="20" rx="2" />
+    <path d="M12 18h.01" />
+  </svg>
+);
+
 export const ArrowUpRight = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <path d="M7 17 17 7M8 7h9v9" />

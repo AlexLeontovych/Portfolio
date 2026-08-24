@@ -14,6 +14,7 @@ import Footer from "./components/Footer";
 import Admin from "./components/admin/Admin";
 import Flashlight from "./components/Flashlight";
 import FinishCelebration from "./components/FinishCelebration";
+import Arcade from "./components/arcade/Arcade";
 
 export default function App() {
   const { t } = useI18n();
@@ -38,6 +39,7 @@ export default function App() {
       <Footer />
       <Admin />
       <Flashlight />
+      <Arcade />
       <FinishCelebration />
     </>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import styles from "./Road.module.css";
 import { finishCelebration } from "../lib/finishCelebration";
+import { arcade } from "../lib/arcadeStore";
 
 /**
  * A winding 2D "road" that runs down the page behind the content and a little
@@ -116,7 +117,10 @@ export default function Road() {
       <path className={styles.asphalt} />
       <path className={styles.lane} />
 
-      <g ref={carRef} className={styles.car}>
+      {/* the car doubles as a launcher for the NEON RUN arcade game */}
+      <g ref={carRef} className={styles.car} onClick={() => arcade.open()}>
+        {/* enlarged invisible hit area for the click */}
+        <circle r="34" fill="transparent" />
         {/* drawn lying along +x (nose at +x); rotated to the path tangent */}
         <rect x="-13" y="-10.5" width="7" height="3" rx="1.2" className={styles.wheel} />
         <rect x="-13" y="7.5" width="7" height="3" rx="1.2" className={styles.wheel} />
