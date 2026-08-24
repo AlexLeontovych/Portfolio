@@ -126,7 +126,7 @@ export default function Skills() {
             <h3 className={styles.colTitle}>{t("skills.education")}</h3>
             <ul className={styles.edu}>
               {education.map((e) => (
-                <li key={e.institution} className={styles.eduItem}>
+                <li key={`${e.institution} ${e.period}`} className={styles.eduItem}>
                   <span className={styles.eduPeriod}>{e.period}</span>
                   <span className={styles.eduDegree}>{tr(e.degree)}</span>
                   <span className={styles.eduInst}>{e.institution}</span>

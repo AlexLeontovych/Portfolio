@@ -95,6 +95,15 @@ export const education: EducationItem[] = [
   {
     institution: "National University of Life and Environmental Sciences of Ukraine",
     degree: {
+      en: "Computer Software Engineering — Master's degree",
+      ru: "Программная инженерия — магистр",
+      uk: "Інженерія програмного забезпечення — магістр",
+    },
+    period: "2026 — 2028",
+  },
+  {
+    institution: "National University of Life and Environmental Sciences of Ukraine",
+    degree: {
       en: "Software Engineering — Bachelor's degree",
       ru: "Программная инженерия — бакалавр",
       uk: "Інженерія програмного забезпечення — бакалавр",
