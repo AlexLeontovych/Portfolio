@@ -1,5 +1,19 @@
 [
   {
+    "id": "amigo-fortune-balloons",
+    "url": "https://amigogaming.com/ru/games/fortune-balloons#demoStart",
+    "title": "Fortune Balloons — Slot Game",
+    "company": "Amigo Gaming",
+    "platform": "Amigo Gaming",
+    "kind": "Game",
+    "complexity": 5,
+    "tags": [
+      "Slot Game"
+    ],
+    "favourite": true,
+    "thumb": "./shots/amigo-fortune-balloons.jpg"
+  },
+  {
     "id": "undertone-126167",
     "url": "https://su-p.undertone.com/126167",
     "title": "Retail Creative #126167",
