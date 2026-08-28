@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "../../i18n/I18nContext";
 import { arcade, useArcadeOpen } from "../../lib/arcadeStore";
+import { carStore, useSelectedCar } from "../../lib/carStore";
 import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 import { ArcadeEngine, type ArcadePhase } from "./engine";
+import { CAR_STYLES } from "./cars";
+import { Turntable } from "./carViewer";
 import { Close, Gamepad, Videocam, Smartphone } from "../Icons";
 import styles from "./arcade.module.css";
 
@@ -14,6 +17,50 @@ import styles from "./arcade.module.css";
  * plumbing (scroll lock, Escape, focus).
  */
 
+/** One garage card: a live 3D turntable, the name plate and flavor stats. */
+function CarCard({
+  idx,
+  selected,
+  onSelect,
+}: {
+  idx: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const tt = new Turntable(canvas, idx);
+    return () => tt.destroy();
+  }, [idx]);
+  const def = CAR_STYLES[idx];
+  return (
+    <button
+      type="button"
+      className={`${styles.card} ${selected ? styles.cardSel : ""}`}
+      onClick={onSelect}
+      aria-pressed={selected}
+      aria-label={def.name}
+    >
+      <canvas ref={canvasRef} className={styles.cardCanvas} />
+      <span className={styles.cardName}>{def.name}</span>
+      <span className={styles.cardStats}>
+        {(["speed", "grip", "style"] as const).map((k) => (
+          <span key={k} className={styles.statRow}>
+            <span className={styles.statLabel}>{k.toUpperCase()}</span>
+            <span className={styles.statBar}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <i key={n} className={n <= def.stats[k] ? styles.segOn : styles.seg} />
+              ))}
+            </span>
+          </span>
+        ))}
+      </span>
+    </button>
+  );
+}
+
 export default function Arcade() {
   const open = useArcadeOpen();
   const { t } = useI18n();
@@ -23,6 +70,7 @@ export default function Arcade() {
   const closeRef = useRef<HTMLButtonElement>(null);
   const [phase, setPhase] = useState<ArcadePhase>("ready");
   const [tiltOn, setTiltOn] = useState(false);
+  const carIdx = useSelectedCar();
   const [result, setResult] = useState<{
     score: number;
     best: number;
@@ -33,6 +81,20 @@ export default function Arcade() {
   const touch =
     typeof window !== "undefined" &&
     window.matchMedia?.("(hover: none), (pointer: coarse)").matches;
+
+  // in the garage the arrow keys browse the cars
+  useEffect(() => {
+    if (!open || phase !== "ready") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const dir = e.key === "ArrowRight" ? 1 : -1;
+      const next = (carStore.get() + dir + CAR_STYLES.length) % CAR_STYLES.length;
+      carStore.set(next);
+      engineRef.current?.setCar(next);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, phase]);
 
   useEffect(() => {
     if (!open) return;
@@ -62,6 +124,9 @@ export default function Arcade() {
       },
     });
     engineRef.current = engine;
+    // the store is the source of truth for the garage selection (survives
+    // storage-blocked environments where localStorage silently fails)
+    engine.setCar(carStore.get());
     // Dev-only handle for measuring frame cost from the console / tooling.
     if (import.meta.env.DEV) {
       (window as unknown as { __arcadeEngine?: ArcadeEngine }).__arcadeEngine = engine;
@@ -160,10 +225,29 @@ export default function Arcade() {
             )}
 
             {phase === "ready" && (
-              <div className={styles.ready} aria-hidden="true">
+              <div className={styles.garage}>
                 <h2 className={styles.title}>NEON RUN</h2>
-                <p className={styles.tagline}>{t("arcade.ready")}</p>
-                <p className={styles.blink}>{touch ? t("arcade.start_tap") : t("arcade.start_key")}</p>
+                <p className={styles.tagline}>{t("arcade.garage")}</p>
+                <div className={styles.cards}>
+                  {CAR_STYLES.map((d, i) => (
+                    <CarCard
+                      key={d.name}
+                      idx={i}
+                      selected={i === carIdx}
+                      onSelect={() => {
+                        carStore.set(i);
+                        engineRef.current?.setCar(i);
+                      }}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className={`btn ${styles.startBtn}`}
+                  onClick={() => engineRef.current?.play()}
+                >
+                  {t("arcade.start")}
+                </button>
                 <p className={styles.controls}>
                   {touch ? t("arcade.controls_touch") : t("arcade.controls")}
                 </p>

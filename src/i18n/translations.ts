@@ -110,6 +110,8 @@ export const dict = {
       cta: "You made it — let\u2019s talk!",
       view: "Camera: chase / cockpit",
       tilt: "Tilt steering (hold the phone like a wheel)",
+      garage: "Pick your ride — drag a car to spin it",
+      start: "START ENGINE",
     },
     finish: {
       title: "You made it to the finish line! 🏁",
@@ -291,6 +293,8 @@ export const dict = {
       cta: "Доехали — давайте работать!",
       view: "Камера: сзади / кабина",
       tilt: "Руль наклоном телефона",
+      garage: "Выбери тачку — потяни, чтобы покрутить",
+      start: "ЗАВЕСТИ МОТОР",
     },
     finish: {
       title: "Вы добрались до финиша! 🏁",
@@ -472,6 +476,8 @@ export const dict = {
       cta: "Доїхали — працюймо разом!",
       view: "Камера: ззаду / кабіна",
       tilt: "Кермо нахилом телефона",
+      garage: "Обери тачку — потягни, щоб покрутити",
+      start: "ЗАВЕСТИ МОТОР",
     },
     finish: {
       title: "Ви дісталися фінішу! 🏁",

@@ -17,6 +17,8 @@
  * driven through the `onState` / `onGameOver` callbacks.
  */
 
+import { CAR_KEY, CAR_STYLES } from "./cars";
+
 export type ArcadePhase = "ready" | "playing" | "crash" | "over" | "prompt";
 
 export interface ArcadeOptions {
@@ -294,6 +296,8 @@ export class ArcadeEngine {
   private toasts: { text: string; t: number; color: string }[] = [];
   private confetti: { x: number; y: number; vx: number; vy: number; color: string; life: number }[] = [];
   private night = false;
+  // garage selection (index into CAR_STYLES)
+  private carIdx = 0;
   // camera: chase (behind the car) or cockpit (behind the wheel)
   private viewMode: "chase" | "cockpit" = "chase";
   private camHCur = CAM_H;
@@ -384,6 +388,12 @@ export class ArcadeEngine {
         this.viewMode = "cockpit";
         this.camHCur = CAM_H * 0.8;
       }
+    } catch {
+      /* ignore */
+    }
+    try {
+      const c = parseInt(localStorage.getItem(CAR_KEY) ?? "0", 10);
+      if (c >= 0 && c < CAR_STYLES.length) this.carIdx = c;
     } catch {
       /* ignore */
     }
@@ -595,6 +605,13 @@ export class ArcadeEngine {
     this.tiltSteer += (target - this.tiltSteer) * 0.3;
   };
 
+  /** Garage: swap the car and re-bake everything that wears its colors. */
+  setCar(idx: number) {
+    if (idx === this.carIdx || idx < 0 || idx >= CAR_STYLES.length) return;
+    this.carIdx = idx;
+    if (this.W > 0) this.rebuildStatic();
+  }
+
   /** Switch between the chase camera and the in-car cockpit view. */
   toggleView() {
     this.viewMode = this.viewMode === "chase" ? "cockpit" : "chase";
@@ -728,7 +745,11 @@ export class ArcadeEngine {
     if (k === "arrowleft" || k === "a") this.keyL = true;
     if (k === "arrowright" || k === "d") this.keyR = true;
     if (k === "arrowdown" || k === "s") this.keyBrake = true;
-    if (this.phase === "ready") this.play();
+    if (this.phase === "ready") {
+      // the garage owns the keyboard: arrows browse cars (React), Tab moves
+      // focus, letters do nothing — only an explicit confirm starts the run
+      if (k === "enter" || k === " ") this.play();
+    }
     else if (this.phase === "over" && (k === "enter" || k === " ")) this.play();
   };
 
@@ -1668,7 +1689,7 @@ export class ArcadeEngine {
     ctx.arc(cx, cx, r + rim * 0.28, Math.PI * 1.15, Math.PI * 1.85);
     ctx.stroke();
     /* racing stripe at 12 o'clock */
-    ctx.strokeStyle = COLORS.magenta;
+    ctx.strokeStyle = CAR_STYLES[this.carIdx].bar[1];
     ctx.lineWidth = rim * 0.85;
     ctx.beginPath();
     ctx.arc(cx, cx, r, Math.PI * 1.46, Math.PI * 1.54);
@@ -1880,13 +1901,13 @@ export class ArcadeEngine {
   }
 
   /**
-   * The player's car, seen from behind: a low synthwave sports coupe — wide
-   * fenders, full-width neon light bar, spoiler wing, diffuser, cyan rim
-   * light. Baked at 2× and drawn scaled for crisp edges; the glow costs
-   * nothing at runtime because it is part of the bake. `brake` bakes the
-   * brighter light-bar variant shown while braking.
+   * The player's car, seen from behind — baked per garage selection: the
+   * body gradient, light bar, trim and tail silhouette (wing / clean /
+   * ducktail) all come from CAR_STYLES[this.carIdx]. Baked at 2x and drawn
+   * scaled; the glow costs nothing at runtime because it is in the bake.
    */
   private bakeCar(cwCss: number, brake: boolean): HTMLCanvasElement {
+    const st = CAR_STYLES[this.carIdx];
     const S = 2; // supersample
     const u = cwCss * S; // car width in bake pixels
     const w = u * 1.4;
@@ -1895,7 +1916,7 @@ export class ArcadeEngine {
     const cx = w / 2;
     const bottom = h - u * 0.08; // baseline: bottom of the wheels
 
-    const px = (v: number) => v * u; // fractions of car width → bake px
+    const px = (v: number) => v * u; // fractions of car width -> bake px
 
     /* wheels (peek out past the fenders) */
     ctx.fillStyle = "#0b0716";
@@ -1907,26 +1928,38 @@ export class ArcadeEngine {
     ctx.fillRect(cx - px(0.5), bottom - px(0.06), px(0.13), px(0.018));
     ctx.fillRect(cx + px(0.37), bottom - px(0.06), px(0.13), px(0.018));
 
-    /* spoiler wing on struts (drawn before the cabin so the struts sit behind) */
-    const wingY = bottom - px(0.52);
-    ctx.fillStyle = "#31103a";
-    ctx.fillRect(cx - px(0.24), wingY, px(0.045), px(0.1));
-    ctx.fillRect(cx + px(0.195), wingY, px(0.045), px(0.1));
-    const wingGrad = ctx.createLinearGradient(0, wingY - px(0.05), 0, wingY + px(0.02));
-    wingGrad.addColorStop(0, "#5b1a52");
-    wingGrad.addColorStop(1, "#38103f");
-    ctx.fillStyle = wingGrad;
-    rrect(ctx, cx - px(0.42), wingY - px(0.05), px(0.84), px(0.055), px(0.025));
-    ctx.fill();
-    // wing endplates, magenta accents
-    ctx.fillStyle = COLORS.magenta;
-    rrect(ctx, cx - px(0.435), wingY - px(0.065), px(0.03), px(0.085), px(0.012));
-    ctx.fill();
-    rrect(ctx, cx + px(0.405), wingY - px(0.065), px(0.03), px(0.085), px(0.012));
-    ctx.fill();
+    /* tail: full wing on struts, muscle ducktail, or a clean deck */
+    if (st.wing === "wing") {
+      const wingY = bottom - px(0.52);
+      ctx.fillStyle = "#31103a";
+      ctx.fillRect(cx - px(0.24), wingY, px(0.045), px(0.1));
+      ctx.fillRect(cx + px(0.195), wingY, px(0.045), px(0.1));
+      const wingGrad = ctx.createLinearGradient(0, wingY - px(0.05), 0, wingY + px(0.02));
+      wingGrad.addColorStop(0, "#5b1a52");
+      wingGrad.addColorStop(1, "#38103f");
+      ctx.fillStyle = wingGrad;
+      rrect(ctx, cx - px(0.42), wingY - px(0.05), px(0.84), px(0.055), px(0.025));
+      ctx.fill();
+      ctx.fillStyle = st.bar[1];
+      rrect(ctx, cx - px(0.435), wingY - px(0.065), px(0.03), px(0.085), px(0.012));
+      ctx.fill();
+      rrect(ctx, cx + px(0.405), wingY - px(0.065), px(0.03), px(0.085), px(0.012));
+      ctx.fill();
+    } else if (st.wing === "duck") {
+      const duckY = bottom - px(0.47);
+      const duckGrad = ctx.createLinearGradient(0, duckY - px(0.05), 0, duckY + px(0.03));
+      duckGrad.addColorStop(0, st.body[0]);
+      duckGrad.addColorStop(1, st.body[2]);
+      ctx.fillStyle = duckGrad;
+      rrect(ctx, cx - px(0.4), duckY - px(0.045), px(0.8), px(0.075), px(0.02));
+      ctx.fill();
+      ctx.fillStyle = st.accent;
+      rrect(ctx, cx - px(0.4), duckY - px(0.052), px(0.8), px(0.014), px(0.007));
+      ctx.fill();
+    }
 
     /* cabin (narrower than the body) + rear window */
-    const cabinTop = bottom - px(0.62);
+    const cabinTop = bottom - px(st.wing === "none" ? 0.58 : 0.62);
     const cabinH = px(0.3);
     ctx.beginPath();
     ctx.moveTo(cx - px(0.31), cabinTop + cabinH);
@@ -1947,9 +1980,9 @@ export class ArcadeEngine {
     ctx.lineTo(cx + px(0.255), cabinTop + cabinH - px(0.03));
     ctx.closePath();
     const winGrad = ctx.createLinearGradient(0, cabinTop, 0, cabinTop + cabinH);
-    winGrad.addColorStop(0, "rgba(0, 229, 255, 0.5)");
-    winGrad.addColorStop(0.6, "rgba(0, 160, 210, 0.18)");
-    winGrad.addColorStop(1, "rgba(0, 229, 255, 0.06)");
+    winGrad.addColorStop(0, `rgba(${st.v.glass.join(",")}, 0.5)`);
+    winGrad.addColorStop(0.6, `rgba(${st.v.glass.join(",")}, 0.18)`);
+    winGrad.addColorStop(1, `rgba(${st.v.glass.join(",")}, 0.06)`);
     ctx.fillStyle = winGrad;
     ctx.fill();
     // diagonal sheen across the glass
@@ -1964,13 +1997,15 @@ export class ArcadeEngine {
     ctx.closePath();
     ctx.fill();
     ctx.restore();
-    // cyan rim light along the roof line
-    ctx.strokeStyle = "rgba(0, 229, 255, 0.9)";
+    // rim light along the roof line
+    ctx.strokeStyle = st.accent;
+    ctx.globalAlpha = 0.9;
     ctx.lineWidth = Math.max(1.5, px(0.012));
     ctx.beginPath();
     ctx.moveTo(cx - px(0.24), cabinTop + px(0.03));
     ctx.quadraticCurveTo(cx, cabinTop - px(0.025), cx + px(0.24), cabinTop + px(0.03));
     ctx.stroke();
+    ctx.globalAlpha = 1;
 
     /* body: wide trunk with flared fenders */
     const bodyTop = bottom - px(0.38);
@@ -1985,33 +2020,36 @@ export class ArcadeEngine {
     ctx.quadraticCurveTo(cx - px(0.49), bodyTop + px(0.02), cx - px(0.36), bodyTop);
     ctx.closePath();
     const bodyGrad = ctx.createLinearGradient(0, bodyTop, 0, bodyTop + bodyH);
-    bodyGrad.addColorStop(0, "#ff6cb1");
-    bodyGrad.addColorStop(0.45, "#e0257b");
-    bodyGrad.addColorStop(1, "#6d123f");
+    bodyGrad.addColorStop(0, st.body[0]);
+    bodyGrad.addColorStop(0.45, st.body[1]);
+    bodyGrad.addColorStop(1, st.body[2]);
     ctx.fillStyle = bodyGrad;
     ctx.save();
-    ctx.shadowColor = "rgba(255, 46, 136, 0.55)";
+    ctx.shadowColor = `rgba(${st.glowRGB}, 0.55)`;
     ctx.shadowBlur = px(0.09);
     ctx.fill();
     ctx.restore();
     // shoulder highlight
-    ctx.strokeStyle = "rgba(0, 229, 255, 0.55)";
+    ctx.strokeStyle = st.accent;
+    ctx.globalAlpha = 0.55;
     ctx.lineWidth = Math.max(1, px(0.01));
     ctx.beginPath();
     ctx.moveTo(cx - px(0.47), bodyTop + px(0.035));
     ctx.quadraticCurveTo(cx, bodyTop - px(0.015), cx + px(0.47), bodyTop + px(0.035));
     ctx.stroke();
+    ctx.globalAlpha = 1;
 
     /* full-width neon light bar */
     const barY = bodyTop + px(0.075);
     const barH = px(0.07);
+    const bar = brake ? st.barBrake : st.bar;
     ctx.save();
-    ctx.shadowColor = COLORS.magenta;
+    ctx.shadowColor = bar[1];
     ctx.shadowBlur = brake ? px(0.22) : px(0.12);
     const barGrad = ctx.createLinearGradient(0, barY, 0, barY + barH);
-    barGrad.addColorStop(0, brake ? "#ffe3f1" : "#ff9bcb");
-    barGrad.addColorStop(0.5, brake ? "#ff8fc4" : COLORS.magenta);
-    barGrad.addColorStop(1, "#c81b68");
+    barGrad.addColorStop(0, bar[0]);
+    barGrad.addColorStop(0.5, bar[1]);
+    barGrad.addColorStop(1, bar[2]);
     ctx.fillStyle = barGrad;
     rrect(ctx, cx - px(0.42), barY, px(0.84), barH, px(0.03));
     ctx.fill();
@@ -2028,10 +2066,12 @@ export class ArcadeEngine {
     ctx.fillStyle = "#0c1830";
     rrect(ctx, cx - plateW / 2, plateY, plateW, plateH, px(0.015));
     ctx.fill();
-    ctx.strokeStyle = "rgba(0, 229, 255, 0.5)";
+    ctx.strokeStyle = st.accent;
+    ctx.globalAlpha = 0.5;
     ctx.lineWidth = Math.max(1, px(0.008));
     rrect(ctx, cx - plateW / 2, plateY, plateW, plateH, px(0.015));
     ctx.stroke();
+    ctx.globalAlpha = 1;
     ctx.fillStyle = "#9adfff";
     ctx.font = `bold ${px(0.055)}px "Share Tech Mono", monospace`;
     ctx.textAlign = "center";
@@ -2050,7 +2090,8 @@ export class ArcadeEngine {
 
     /* exhaust tips */
     ctx.fillStyle = "#1a0a1f";
-    ctx.strokeStyle = "rgba(0, 229, 255, 0.6)";
+    ctx.strokeStyle = st.accent;
+    ctx.globalAlpha = 0.6;
     ctx.lineWidth = Math.max(1, px(0.008));
     for (const ex of [-0.17, 0.17]) {
       ctx.beginPath();
@@ -2058,6 +2099,7 @@ export class ArcadeEngine {
       ctx.fill();
       ctx.stroke();
     }
+    ctx.globalAlpha = 1;
 
     return c;
   }

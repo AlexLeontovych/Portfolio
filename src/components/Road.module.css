@@ -39,8 +39,9 @@
   cursor: pointer;
 }
 .body {
-  fill: #ff3b53;
-  stroke: #2a0c14;
+  /* painted by the NEON RUN garage selection (src/lib/carStore.ts) */
+  fill: var(--road-car-body, #ff3b53);
+  stroke: var(--road-car-stroke, #2a0c14);
   stroke-width: 1;
 }
 .glass {

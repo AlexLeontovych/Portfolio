@@ -170,6 +170,106 @@
   font-size: clamp(0.78rem, 1.8vw, 0.95rem);
 }
 
+/* ---------- garage (car select on the ready screen) ---------- */
+
+.garage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 1rem;
+  text-align: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(13, 2, 33, 0.25), rgba(13, 2, 33, 0.72));
+}
+.cards {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.5rem, 2vw, 1.1rem);
+  width: 100%;
+}
+.card {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: clamp(104px, 26vw, 240px);
+  padding: 0.55rem 0.55rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: rgba(21, 12, 43, 0.82);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.card:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-2px);
+}
+.cardSel {
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-4px);
+}
+.cardCanvas {
+  display: block;
+  width: 100%;
+  height: clamp(88px, 13vw, 148px);
+  touch-action: none;
+  cursor: grab;
+}
+.cardCanvas:active {
+  cursor: grabbing;
+}
+.cardName {
+  font-family: var(--font-pixel);
+  font-size: clamp(0.42rem, 1.1vw, 0.56rem);
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+.cardStats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+.statRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+.statLabel {
+  font-family: var(--font-mono);
+  font-size: clamp(0.5rem, 1vw, 0.62rem);
+  color: var(--muted-2);
+  letter-spacing: 0.08em;
+}
+.statBar {
+  display: inline-flex;
+  gap: 3px;
+}
+.seg,
+.segOn {
+  width: clamp(7px, 1.1vw, 12px);
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(170, 130, 255, 0.18);
+}
+.segOn {
+  background: var(--cyan);
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.55);
+}
+.startBtn {
+  pointer-events: auto;
+  box-shadow: var(--glow-magenta);
+}
+.garage .controls {
+  pointer-events: none;
+}
+
 /* ---------- game-over panel ---------- */
 
 .overWrap {

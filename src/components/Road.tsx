@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import styles from "./Road.module.css";
+import "../lib/carStore"; // applies the garage car color to --road-car-body
 import { finishCelebration } from "../lib/finishCelebration";
 import { arcade } from "../lib/arcadeStore";
 
