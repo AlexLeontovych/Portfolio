@@ -152,7 +152,7 @@ export interface EngineHooks {
 }
 
 export type Action =
-  | "left" | "right" | "up" | "down" | "jump" | "light" | "heavy" | "special" | "dash";
+  | "left" | "right" | "down" | "jump" | "light" | "heavy" | "special" | "dash";
 
 interface Body {
   x: number;

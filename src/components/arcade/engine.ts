@@ -822,7 +822,7 @@ export class ArcadeEngine {
     const k = e.key.toLowerCase();
     if (this.phase === "prompt") {
       // "z" (or RU-layout "я") accepts the Ctrl+Z offer
-      if (k === "z" || k === "\u044f") {
+      if (e.code === "KeyZ" || k === "z" || k === "\u044f") {
         e.preventDefault();
         this.doRewind();
       }
@@ -831,15 +831,17 @@ export class ArcadeEngine {
     if (["arrowleft", "arrowright", "arrowup", "arrowdown", " ", "enter"].includes(k)) {
       e.preventDefault();
     }
-    if (k === "c" || k === "\u0441") {
+    if (e.code === "KeyC" || k === "c" || k === "\u0441") {
       // camera toggle ("\u0441" = RU-layout C); never doubles as "start".
       // edge-triggered, so ignore OS key auto-repeat
       if (!e.repeat) this.toggleView();
       return;
     }
-    if (k === "arrowleft" || k === "a") this.keyL = true;
-    if (k === "arrowright" || k === "d") this.keyR = true;
-    if (k === "arrowdown" || k === "s") this.keyBrake = true;
+    // Steer by PHYSICAL key: `e.key` carries the layout, so on a Russian
+    // keyboard A/D/S arrive as other letters and only the arrows ever worked.
+    if (e.code === "ArrowLeft" || e.code === "KeyA" || k === "arrowleft" || k === "a") this.keyL = true;
+    if (e.code === "ArrowRight" || e.code === "KeyD" || k === "arrowright" || k === "d") this.keyR = true;
+    if (e.code === "ArrowDown" || e.code === "KeyS" || k === "arrowdown" || k === "s") this.keyBrake = true;
     if (this.phase === "ready") {
       // the garage owns the keyboard: arrows browse cars (React), Tab moves
       // focus, letters do nothing — only an explicit confirm starts the run
@@ -850,9 +852,9 @@ export class ArcadeEngine {
 
   private onKeyUp = (e: KeyboardEvent) => {
     const k = e.key.toLowerCase();
-    if (k === "arrowleft" || k === "a") this.keyL = false;
-    if (k === "arrowright" || k === "d") this.keyR = false;
-    if (k === "arrowdown" || k === "s") this.keyBrake = false;
+    if (e.code === "ArrowLeft" || e.code === "KeyA" || k === "arrowleft" || k === "a") this.keyL = false;
+    if (e.code === "ArrowRight" || e.code === "KeyD" || k === "arrowright" || k === "d") this.keyR = false;
+    if (e.code === "ArrowDown" || e.code === "KeyS" || k === "arrowdown" || k === "s") this.keyBrake = false;
   };
 
   private onPointerDown = (e: PointerEvent) => {

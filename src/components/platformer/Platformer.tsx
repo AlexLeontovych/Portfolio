@@ -40,17 +40,38 @@ const UI_VARS = {
   "--ui-coin": `url(${UI_BASE}/coin.png)`,
 } as React.CSSProperties;
 
-const KEYS: Record<string, Action> = {
-  arrowleft: "left", a: "left",
-  arrowright: "right", d: "right",
-  arrowup: "up", w: "up",
-  arrowdown: "down", s: "down",
-  " ": "jump", z: "jump",
-  j: "light", x: "light",
-  k: "heavy", c: "heavy",
-  l: "special", v: "special",
-  shift: "dash", q: "dash",
+/**
+ * Bindings by PHYSICAL key, not by the character the key produces.
+ *
+ * `KeyboardEvent.key` carries the active layout, so on a Russian keyboard WASD
+ * arrives as "цфыв" and every movement binding silently misses. `code` is the
+ * position on the board, which is what a game actually means by "W".
+ */
+const CODES: Record<string, Action> = {
+  KeyA: "left", ArrowLeft: "left",
+  KeyD: "right", ArrowRight: "right",
+  KeyW: "jump", ArrowUp: "jump", Space: "jump",
+  KeyS: "down", ArrowDown: "down",
+  KeyQ: "light",
+  KeyE: "heavy",
+  KeyR: "special",
+  ShiftLeft: "dash", ShiftRight: "dash", KeyF: "dash",
 };
+
+/** Fallback for the rare engine that reports no `code`; Latin layouts only. */
+const KEYS: Record<string, Action> = {
+  a: "left", arrowleft: "left",
+  d: "right", arrowright: "right",
+  w: "jump", arrowup: "jump", " ": "jump",
+  s: "down", arrowdown: "down",
+  q: "light",
+  e: "heavy",
+  r: "special",
+  shift: "dash", f: "dash",
+};
+
+const actionFor = (ev: KeyboardEvent): Action | undefined =>
+  CODES[ev.code] ?? KEYS[ev.key?.toLowerCase() ?? ""];
 
 /** A looping sprite preview, so the hero cards show the actual animation. */
 function HeroPreview({ hero, active }: { hero: HeroId; active: boolean }) {
@@ -188,8 +209,8 @@ export default function Platformer() {
   useEffect(() => {
     if (!open) return;
     const down = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase();
-      if (k === "escape") {
+      const k = e.key?.toLowerCase() ?? "";
+      if (e.code === "Escape" || k === "escape") {
         e.stopPropagation();
         e.preventDefault();
         const engine = engineRef.current;
@@ -201,21 +222,19 @@ export default function Platformer() {
         return;
       }
       if (screen !== "game") return;
-      if (k === "p") {
+      // restarting used to sit on R, which is now the special attack; the
+      // pause card and the death card both still offer it
+      if (e.code === "KeyP" || k === "p") {
         engineRef.current?.setPaused(phase !== "paused");
         return;
       }
-      if (k === "r" && (phase === "playing" || phase === "paused")) {
-        engineRef.current?.restart();
-        return;
-      }
-      const action = KEYS[k];
+      const action = actionFor(e);
       if (!action) return;
       e.preventDefault();
       if (!e.repeat) engineRef.current?.press(action);
     };
     const up = (e: KeyboardEvent) => {
-      const action = KEYS[e.key.toLowerCase()];
+      const action = actionFor(e);
       if (action) engineRef.current?.release(action);
     };
     const blur = () => engineRef.current?.clearInput();

@@ -160,7 +160,7 @@ export const dict = {
       stat_power: "Power",
       stat_reach: "Reach",
       stat_tough: "Tough",
-      controls: "← → / A D — move · Space — jump · Shift — dash · ↓ — drop through · ↓ + attack in the air — down-thrust · J — light · K — heavy · L — special · Esc — pause",
+      controls: "A D / ← → — move · W or Space — jump · S — drop through · Q — light · E — heavy · R — special · Shift — dash · S + Q in the air — down-thrust · Esc — pause",
       controls_touch: "Left pad — move and duck · ⤒ — jump · » — dash · ⚔ ✹ ✦ — attacks · ▼ + ⚔ in the air — down-thrust",
     },
     pet: {
@@ -404,7 +404,7 @@ export const dict = {
       stat_power: "Сила",
       stat_reach: "Дальность",
       stat_tough: "Живучесть",
-      controls: "← → / A D — идти · Пробел — прыжок · Shift — рывок · ↓ — вниз сквозь платформу · ↓ + удар в воздухе — удар вниз · J — лёгкий · K — тяжёлый · L — спецудар · Esc — пауза",
+      controls: "A D / ← → — идти · W или Пробел — прыжок · S — вниз сквозь платформу · Q — лёгкий · E — тяжёлый · R — спецудар · Shift — рывок · S + Q в воздухе — удар вниз · Esc — пауза",
       controls_touch: "Слева — движение и вниз · ⤒ — прыжок · » — рывок · ⚔ ✹ ✦ — удары · ▼ + ⚔ в воздухе — удар вниз",
     },
     pet: {
@@ -648,7 +648,7 @@ export const dict = {
       stat_power: "Сила",
       stat_reach: "Дистанція",
       stat_tough: "Живучість",
-      controls: "← → / A D — рух · Пробіл — стрибок · Shift — ривок · ↓ — вниз крізь платформу · ↓ + удар у повітрі — удар вниз · J — легкий · K — важкий · L — спецудар · Esc — пауза",
+      controls: "A D / ← → — рух · W або Пробіл — стрибок · S — вниз крізь платформу · Q — легкий · E — важкий · R — спецудар · Shift — ривок · S + Q у повітрі — удар вниз · Esc — пауза",
       controls_touch: "Ліворуч — рух і вниз · ⤒ — стрибок · » — ривок · ⚔ ✹ ✦ — удари · ▼ + ⚔ у повітрі — удар вниз",
     },
     pet: {
