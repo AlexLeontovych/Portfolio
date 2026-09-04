@@ -11,7 +11,7 @@ Used in: the NEON RUN garage (`public/models/*.glb`, shared texture atlas in
 `public/models/Textures/colormap.png`). The models are recoloured at runtime to the game palette;
 the original licence text ships alongside them in `public/models/LICENSE.txt`.
 
-## Pixel art — STACK OVERFLOW platformer
+## Pixel art — EMBERWOOD platformer
 
 **Huntress**, **Hero Knight**, **Evil Wizard 2**, **Monsters Creatures Fantasy** — [LuizMelo](https://luizmelo.itch.io/)
 Licence: [CC0 1.0](http://creativecommons.org/publicdomain/zero/1.0/) (public domain).

@@ -104,7 +104,6 @@ export interface Hud {
   score: number;
   level: number;
   levelName: string;
-  levelSubtitle: string;
   kills: number;
   time: number;
   /** 0..1 while a boss is alive, null otherwise */
@@ -113,10 +112,18 @@ export interface Hud {
   charging: number; // 0..1
 }
 
+/**
+ * What the engine wants announced on screen. It reports the event, never the
+ * sentence: the wording (and its language) belongs to the UI layer.
+ */
+export type Toast =
+  | { kind: "level"; index: number; name: string }
+  | { kind: "bossPhase"; phase: 2 | 3 };
+
 export interface EngineHooks {
   onPhase: (phase: Phase) => void;
   onHud: (hud: Hud) => void;
-  onToast: (text: string) => void;
+  onToast: (toast: Toast) => void;
 }
 
 export type Action = "left" | "right" | "up" | "down" | "jump" | "light" | "heavy" | "special";
@@ -495,7 +502,7 @@ export class PlatformerEngine {
     this.cam.y = this.player.y;
     this.setPhase("playing");
     this.audio.setTrack(def.biome === "arena" ? "boss" : this.levelIdx >= 2 ? "tense" : "calm");
-    this.hooks.onToast(`${this.levelIdx + 1}. ${def.name}`);
+    this.hooks.onToast({ kind: "level", index: this.levelIdx + 1, name: def.name });
     this.emitHud();
   }
 
@@ -1087,9 +1094,11 @@ export class PlatformerEngine {
 
     const ratio = b.hp / b.maxHp;
     const phase: 1 | 2 | 3 = ratio > 0.66 ? 1 : ratio > 0.33 ? 2 : 3;
-    if (phase !== b.phase) {
+    if (phase > b.phase) {
+      // only ever announce an escalation — healing back down would be a bug,
+      // and the toast has no wording for "phase 1" anyway
       b.phase = phase;
-      this.hooks.onToast(phase === 2 ? "ФАЗА 2 — он зовёт подмогу" : "ФАЗА 3 — держись");
+      this.hooks.onToast({ kind: "bossPhase", phase: phase as 2 | 3 });
       this.shake = 12;
       this.flash = 0.8;
       b.state = "vanish";
@@ -1500,7 +1509,6 @@ export class PlatformerEngine {
       score: this.score,
       level: this.levelIdx,
       levelName: def.name,
-      levelSubtitle: def.subtitle,
       kills: this.kills,
       time: this.levelTime,
       boss: this.boss ? this.boss.hp / this.boss.maxHp : null,

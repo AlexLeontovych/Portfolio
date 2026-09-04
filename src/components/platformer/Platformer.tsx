@@ -5,12 +5,12 @@ import { platformer, usePlatformerOpen } from "../../lib/platformerStore";
 import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 import { Close } from "../Icons";
 import { LEVELS } from "./level";
-import { PlatformerEngine, type Action, type Hud, type Phase } from "./engine";
+import { PlatformerEngine, type Action, type Hud, type Phase, type Toast } from "./engine";
 import { Animator, HERO_INFO, HERO_SHEETS, loadAnimSet, type HeroId } from "./sprites";
 import styles from "./platformer.module.css";
 
 /**
- * STACK OVERFLOW — full-screen pixel-art platformer overlay.
+ * EMBERWOOD — full-screen pixel-art platformer overlay.
  *
  * The engine owns the canvas and the game loop; this component is the chrome:
  * hero select, HUD, pause/death/clear cards, touch pad and open/close
@@ -117,7 +117,7 @@ export default function Platformer() {
   const [hero, setHero] = useState<HeroId>("huntress");
   const [phase, setPhase] = useState<Phase>("loading");
   const [hud, setHud] = useState<Hud | null>(null);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<Toast | null>(null);
   const [muted, setMuted] = useState(false);
   const [startLevel, setStartLevel] = useState(0);
   const unlocked = useMemo(() => (open ? platformer.unlocked() : 0), [open, screen]);
@@ -150,9 +150,9 @@ export default function Platformer() {
       const engine = new PlatformerEngine(canvas, {
         onPhase: setPhase,
         onHud: setHud,
-        onToast: (text) => {
-          setToast(text);
-          window.setTimeout(() => setToast((cur) => (cur === text ? "" : cur)), 2200);
+        onToast: (msg) => {
+          setToast(msg);
+          window.setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 2200);
         },
       });
       engineRef.current = engine;
@@ -270,7 +270,7 @@ export default function Platformer() {
       style={UI_VARS}
       role="dialog"
       aria-modal="true"
-      aria-label="STACK OVERFLOW"
+      aria-label="EMBERWOOD"
     >
       <canvas ref={canvasRef} className={styles.canvas} data-hidden={screen !== "game"} />
 
@@ -302,7 +302,7 @@ export default function Platformer() {
       {screen === "select" && (
         <div className={styles.select}>
           <p className={styles.kicker}>{t("plat.kicker")}</p>
-          <h2 className={styles.title}>STACK OVERFLOW</h2>
+          <h2 className={styles.title}>EMBERWOOD</h2>
           <p className={styles.tagline}>{t("plat.tagline")}</p>
 
           <div className={styles.heroes}>
@@ -404,7 +404,13 @@ export default function Platformer() {
             </div>
           )}
 
-          {toast && <div className={styles.toast}>{toast}</div>}
+          {toast && (
+            <div className={styles.toast}>
+              {toast.kind === "level"
+                ? `${toast.index}. ${toast.name}`
+                : t(`plat.boss_phase_${toast.phase}`)}
+            </div>
+          )}
         </>
       )}
 

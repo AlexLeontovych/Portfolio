@@ -35,8 +35,6 @@ export interface SpawnDef {
 
 export interface LevelDef {
   name: string;
-  /** flavour line shown on the level card */
-  subtitle: string;
   /** biome key — picks the tileset, backdrop and prop set */
   biome: "forest" | "cave" | "arena";
   rows: string[];
@@ -44,7 +42,6 @@ export interface LevelDef {
 
 export interface Level {
   name: string;
-  subtitle: string;
   biome: LevelDef["biome"];
   w: number;
   h: number;
@@ -62,8 +59,7 @@ export interface Level {
  */
 export const LEVELS: LevelDef[] = [
   {
-    name: "FIRST COMMIT",
-    subtitle: "Лес. Первые шаги, первые грибы.",
+    name: "THE OLD PATH",
     biome: "forest",
     rows: [
       "",
@@ -88,8 +84,7 @@ export const LEVELS: LevelDef[] = [
     ],
   },
   {
-    name: "MERGE CONFLICT",
-    subtitle: "Две ветки, одни шипы. Не упади между ними.",
+    name: "BRIARWOOD",
     biome: "forest",
     rows: [
       "",
@@ -114,8 +109,7 @@ export const LEVELS: LevelDef[] = [
     ],
   },
   {
-    name: "NULL POINTER",
-    subtitle: "Пещера. Здесь что-то летает и что-то не инициализировано.",
+    name: "HOLLOW DEPTHS",
     biome: "cave",
     rows: [
       "",
@@ -140,8 +134,7 @@ export const LEVELS: LevelDef[] = [
     ],
   },
   {
-    name: "RACE CONDITION",
-    subtitle: "Всё происходит одновременно. Успей.",
+    name: "THE BONEWAY",
     biome: "cave",
     rows: [
       "",
@@ -166,8 +159,7 @@ export const LEVELS: LevelDef[] = [
     ],
   },
   {
-    name: "SEGFAULT",
-    subtitle: "Финал. Злой волшебник уронил прод.",
+    name: "EMBER THRONE",
     biome: "arena",
     rows: [
       "",
@@ -243,7 +235,7 @@ export function parseLevel(def: LevelDef): Level {
     }
   }
 
-  return { name: def.name, subtitle: def.subtitle, biome: def.biome, w, h, tiles, spawns, start };
+  return { name: def.name, biome: def.biome, w, h, tiles, spawns, start };
 }
 
 /** Tile at world coordinates; out of bounds reads as solid walls, open sky. */

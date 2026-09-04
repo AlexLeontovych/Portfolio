@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Open/close state of the full-screen "STACK OVERFLOW" platformer, plus the
+ * Open/close state of the full-screen "EMBERWOOD" platformer, plus the
  * bit of progress worth surviving a reload. Same external-store idiom as
  * arcadeStore, so any card, nav item or keyboard shortcut can open it.
  */
