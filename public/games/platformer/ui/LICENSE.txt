@@ -1,0 +1,3 @@
+UI skin generated for this project (Oleksandr Leontovych, portfolio).
+Built from the six colours sampled out of ../forest/tileset.png so the
+interface matches the world. Free to reuse.

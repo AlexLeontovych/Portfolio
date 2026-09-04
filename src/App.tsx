@@ -15,6 +15,8 @@ import Admin from "./components/admin/Admin";
 import Flashlight from "./components/Flashlight";
 import FinishCelebration from "./components/FinishCelebration";
 import Arcade from "./components/arcade/Arcade";
+import PlatformerHost from "./components/platformer/PlatformerHost";
+import PetProjects from "./components/PetProjects";
 
 export default function App() {
   const { t } = useI18n();
@@ -32,6 +34,7 @@ export default function App() {
         <Experience />
         <Skills />
         <Works />
+        <PetProjects />
         <Contact />
         <Testimonials />
         <Reference />
@@ -40,6 +43,7 @@ export default function App() {
       <Admin />
       <Flashlight />
       <Arcade />
+      <PlatformerHost />
       <FinishCelebration />
     </>
   );

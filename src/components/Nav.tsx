@@ -6,7 +6,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import { Motion, Close, Shield } from "./Icons";
 import styles from "./Nav.module.css";
 
-const SECTIONS = ["about", "experience", "skills", "works", "contact", "reference"] as const;
+const SECTIONS = ["about", "experience", "skills", "works", "pet", "contact", "reference"] as const;
 
 export default function Nav() {
   const { t } = useI18n();
