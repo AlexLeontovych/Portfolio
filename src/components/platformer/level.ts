@@ -25,7 +25,7 @@ export const enum Tile {
 }
 
 export type EnemyKind = "mushroom" | "goblin" | "skeleton" | "flyingEye";
-export type SpawnKind = EnemyKind | "coin" | "heart" | "boss" | "exit";
+export type SpawnKind = EnemyKind | "coin" | "heart" | "boss" | "exit" | "checkpoint";
 
 export interface SpawnDef {
   kind: SpawnKind;
@@ -35,6 +35,8 @@ export interface SpawnDef {
 
 export interface LevelDef {
   name: string;
+  /** target clear time in seconds — the rank at the end is measured against it */
+  par: number;
   /** biome key — picks the tileset, backdrop and prop set */
   biome: "forest" | "cave" | "arena";
   rows: string[];
@@ -42,6 +44,7 @@ export interface LevelDef {
 
 export interface Level {
   name: string;
+  par: number;
   biome: LevelDef["biome"];
   w: number;
   h: number;
@@ -54,12 +57,13 @@ export interface Level {
  * Map legend
  *   #  solid ground        =  one-way platform      ^  spikes
  *   P  player start        o  coin                  +  heart pickup
- *   E  level exit          B  boss
+ *   E  level exit          B  boss                 !  checkpoint
  *   m  mushroom   g  goblin   s  skeleton   f  flying eye
  */
 export const LEVELS: LevelDef[] = [
   {
     name: "THE OLD PATH",
+    par: 60,
     biome: "forest",
     rows: [
       "",
@@ -78,13 +82,14 @@ export const LEVELS: LevelDef[] = [
       "                   o o o           o o             o o                 o m o             o o",
       "                  ======          ======          ======              ======            ======",
       "",
-      "   P  o  o            m  o    o         m    o            g +                 o     o         m   o Eo",
+      "   P  o  o            m  o    o   !     m    o            g +         !       o     o         m   o Eo",
       "############    ############    ############    ###############    ###############    ##################",
       "############    ############    ############    ###############    ###############    ##################",
     ],
   },
   {
     name: "BRIARWOOD",
+    par: 70,
     biome: "forest",
     rows: [
       "",
@@ -103,13 +108,14 @@ export const LEVELS: LevelDef[] = [
       "                  o o                  o m              o o                o g o           o",
       "                 ======               ======           ======             ======          ======",
       "",
-      "   P o  o           m    ^^^     o         ^^^    o       g ^^^+     o        ^^^      o        g    o  E o",
+      "   P o  o           m    ^^g     o    !    ^m^    o       g ^^^+     o    !   ^^m      o        g    o  E o",
       "###########    ################    #############    ###############    ##############    ###################",
       "###########    ################    #############    ###############    ##############    ###################",
     ],
   },
   {
     name: "HOLLOW DEPTHS",
+    par: 80,
     biome: "cave",
     rows: [
       "",
@@ -128,13 +134,14 @@ export const LEVELS: LevelDef[] = [
       "                    o o                 o oso             o o                o oso           o",
       "                   ======              ======            ======             ======          ======",
       "",
-      "   P o   o            m ^^^       o      ^^^      +       ^^^^m       o        ^^^      o        g ^^^  o Eo",
+      "   P o   o            m ^^^       o     !^g^      +       ^^^^m       o     !  ^^^      o        g ^^m  o Eo",
       "#############    ###############    #############    ################    ##############    ###################",
       "#############    ###############    #############    ################    ##############    ###################",
     ],
   },
   {
     name: "THE BONEWAY",
+    par: 95,
     biome: "cave",
     rows: [
       "",
@@ -153,13 +160,14 @@ export const LEVELS: LevelDef[] = [
       "                  o               o m             o o              o os             o m o           o",
       "                 ======          ======          ======           ======           ======          ======",
       "",
-      "   Po   o           g^^^    o       ^^^     +      ^^^g     o      ^^^^ m      o     ^^^g     +      ^^^s   g o Eo",
+      "   Po   o           g^^^    o    !  ^^s     +      ^^^g     o    ! ^^^^ m      o     ^^^g     +   !  ^^^s   g o Eo",
       "###########    ############    ############    ############    ##############    ############    ###################",
       "###########    ############    ############    ############    ##############    ############    ###################",
     ],
   },
   {
     name: "EMBER THRONE",
+    par: 130,
     biome: "arena",
     rows: [
       "",
@@ -215,6 +223,7 @@ export function parseLevel(def: LevelDef): Level {
     f: "flyingEye",
     B: "boss",
     E: "exit",
+    "!": "checkpoint",
   };
 
   for (let row = 0; row < h; row++) {
@@ -235,7 +244,7 @@ export function parseLevel(def: LevelDef): Level {
     }
   }
 
-  return { name: def.name, biome: def.biome, w, h, tiles, spawns, start };
+  return { name: def.name, par: def.par, biome: def.biome, w, h, tiles, spawns, start };
 }
 
 /** Tile at world coordinates; out of bounds reads as solid walls, open sky. */

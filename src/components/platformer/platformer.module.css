@@ -445,6 +445,98 @@
   text-shadow: 0 0 8px rgba(0, 229, 255, 0.8);
 }
 
+.meters {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* the dash pip: the same socket as the special meter, just square and small */
+.dash {
+  position: relative;
+  width: 34px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-style: solid;
+  border-width: 8px;
+  border-image: var(--ui-bar) 4 repeat;
+  background: var(--navy);
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+.dash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: var(--fill, 0%);
+  background-image: var(--ui-fill-cyan);
+  background-size: auto 100%;
+  background-repeat: repeat-x;
+  opacity: 0.5;
+  transition: width 0.1s steps(4);
+}
+.dash > span {
+  position: relative;
+  color: #7f998e;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+.dash[data-ready="true"] > span {
+  color: #d9fbff;
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.9);
+}
+
+/* ---------- end-of-level grade ---------- */
+
+.rankWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  margin: 0 0 0.9rem;
+}
+.rankLetter {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-style: solid;
+  border-width: 16px;
+  border-image: var(--ui-panel) 8 repeat;
+  background: var(--navy);
+  font-family: var(--font-pixel);
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--lime-hi);
+  text-shadow: 0 3px 0 var(--ink);
+  image-rendering: pixelated;
+  animation: stamp 0.32s ease-out both;
+}
+.rankLetter[data-rank="S"] {
+  color: #ffd45e;
+  text-shadow: 0 0 14px rgba(255, 212, 94, 0.9), 0 3px 0 var(--ink);
+}
+.rankLetter[data-rank="C"] {
+  color: #a9c0b6;
+}
+@keyframes stamp {
+  from { opacity: 0; transform: scale(2.1); }
+  to { opacity: 1; transform: scale(1); }
+}
+.rankNote {
+  max-width: 18ch;
+  color: #a9c0b6;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.results dd[data-good="true"] {
+  color: var(--lime);
+}
+
 .levelTag {
   position: absolute;
   top: 0.9rem;
@@ -711,7 +803,8 @@
 @media (prefers-reduced-motion: reduce) {
   .toast,
   .card,
-  .cardWrap {
+  .cardWrap,
+  .rankLetter {
     animation: none;
   }
   .pixBtn {

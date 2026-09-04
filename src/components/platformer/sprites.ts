@@ -13,6 +13,8 @@
 export interface Anim {
   img: HTMLImageElement;
   frames: number;
+  /** index of this animation's first frame within the sheet */
+  first: number;
   fw: number;
   fh: number;
   fps: number;
@@ -27,7 +29,17 @@ export interface AnimSet {
 
 interface SheetSpec {
   file: string;
+  /** how many frames this animation plays */
   frames: number;
+  /**
+   * Total frames on the sheet, when the animation is only part of it. Every
+   * projectile sheet in the pack is "flight frames, then an impact burst", so
+   * one image backs two animations and the frame width must still be measured
+   * against the whole strip.
+   */
+  sheetFrames?: number;
+  /** index of the first frame to play */
+  first?: number;
   fps?: number;
   loop?: boolean;
 }
@@ -44,7 +56,7 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /** Union of the opaque bounds of every frame, in frame-local coordinates. */
-function measureTrim(img: HTMLImageElement, frames: number, fw: number, fh: number) {
+function measureTrim(img: HTMLImageElement, frames: number, fw: number, fh: number, first = 0) {
   const c = document.createElement("canvas");
   c.width = img.width;
   c.height = img.height;
@@ -57,7 +69,7 @@ function measureTrim(img: HTMLImageElement, frames: number, fw: number, fh: numb
   let maxX = 0;
   let maxY = 0;
   let found = false;
-  for (let f = 0; f < frames; f++) {
+  for (let f = first; f < first + frames; f++) {
     const ox = f * fw;
     for (let y = 0; y < fh; y++) {
       for (let x = 0; x < fw; x++) {
@@ -83,16 +95,18 @@ export async function loadAnimSet(base: string, specs: Record<string, SheetSpec>
   names.forEach((name, i) => {
     const spec = specs[name];
     const img = imgs[i];
-    const fw = Math.round(img.width / spec.frames);
+    const first = spec.first ?? 0;
+    const fw = Math.round(img.width / (spec.sheetFrames ?? spec.frames));
     const fh = img.height;
     set[name] = {
       img,
       frames: spec.frames,
+      first,
       fw,
       fh,
       fps: spec.fps ?? DEFAULT_FPS,
       loop: spec.loop ?? true,
-      trim: measureTrim(img, spec.frames, fw, fh),
+      trim: measureTrim(img, spec.frames, fw, fh, first),
     };
   });
   return set;
@@ -169,7 +183,7 @@ export class Animator {
   ) {
     const a = this.set[this.name];
     if (!a) return;
-    const sx = this.frameIndex * a.fw;
+    const sx = (a.first + this.frameIndex) * a.fw;
     const w = a.fw * scale;
     const h = a.trim.h * scale;
     const dy = anchor === "feet" ? -h : -h / 2;
@@ -275,6 +289,7 @@ export const ENEMY_SHEETS = {
       idle: { file: "idle.png", frames: 4, fps: 7 },
       run: { file: "run.png", frames: 8, fps: 10 },
       attack: { file: "attack.png", frames: 8, fps: 12, loop: false },
+      ranged: { file: "attack-ranged.png", frames: 11, fps: 13, loop: false },
       hit: { file: "take-hit.png", frames: 4, fps: 14, loop: false },
       death: { file: "death.png", frames: 4, fps: 9, loop: false },
     } as Record<string, SheetSpec>,
@@ -285,6 +300,7 @@ export const ENEMY_SHEETS = {
       idle: { file: "idle.png", frames: 4, fps: 7 },
       run: { file: "run.png", frames: 8, fps: 13 },
       attack: { file: "attack.png", frames: 8, fps: 14, loop: false },
+      ranged: { file: "attack-ranged.png", frames: 12, fps: 14, loop: false },
       hit: { file: "take-hit.png", frames: 4, fps: 14, loop: false },
       death: { file: "death.png", frames: 4, fps: 9, loop: false },
     } as Record<string, SheetSpec>,
@@ -295,6 +311,7 @@ export const ENEMY_SHEETS = {
       idle: { file: "idle.png", frames: 4, fps: 7 },
       run: { file: "run.png", frames: 4, fps: 8 },
       attack: { file: "attack.png", frames: 8, fps: 12, loop: false },
+      ranged: { file: "attack-ranged.png", frames: 6, fps: 11, loop: false },
       shield: { file: "shield.png", frames: 4, fps: 10, loop: false },
       hit: { file: "take-hit.png", frames: 4, fps: 14, loop: false },
       death: { file: "death.png", frames: 4, fps: 9, loop: false },
@@ -306,11 +323,51 @@ export const ENEMY_SHEETS = {
       idle: { file: "run.png", frames: 8, fps: 12 },
       run: { file: "run.png", frames: 8, fps: 14 },
       attack: { file: "attack.png", frames: 8, fps: 14, loop: false },
+      ranged: { file: "attack-ranged.png", frames: 6, fps: 12, loop: false },
       hit: { file: "take-hit.png", frames: 4, fps: 14, loop: false },
       death: { file: "death.png", frames: 4, fps: 9, loop: false },
     } as Record<string, SheetSpec>,
   },
 } as const;
+
+/**
+ * A monster's thrown thing. Every projectile sheet in the pack runs flight
+ * frames first and an expanding impact burst after, so `flight` splits the one
+ * image into a loop and a one-shot.
+ */
+export interface ShotSpec {
+  file: string;
+  /** total frames on the sheet */
+  sheetFrames: number;
+  /** how many of them are flight */
+  flight: number;
+  fps: number;
+  scale: number;
+  /** collision radius, world units */
+  r: number;
+}
+
+export const ENEMY_SHOTS: Record<keyof typeof ENEMY_SHEETS, ShotSpec> = {
+  mushroom: { file: "shot.png", sheetFrames: 8, flight: 5, fps: 12, scale: 1.6, r: 13 },
+  goblin: { file: "shot.png", sheetFrames: 19, flight: 12, fps: 14, scale: 1.4, r: 14 },
+  skeleton: { file: "shot.png", sheetFrames: 8, flight: 3, fps: 14, scale: 1.5, r: 16 },
+  flyingEye: { file: "shot.png", sheetFrames: 8, flight: 3, fps: 14, scale: 1.6, r: 13 },
+};
+
+/** Build the two animations a projectile needs out of its single sheet. */
+export function shotSpecs(s: ShotSpec) {
+  return {
+    fly: { file: s.file, frames: s.flight, sheetFrames: s.sheetFrames, fps: s.fps, loop: true },
+    burst: {
+      file: s.file,
+      frames: s.sheetFrames - s.flight,
+      sheetFrames: s.sheetFrames,
+      first: s.flight,
+      fps: s.fps + 4,
+      loop: false,
+    },
+  } as const;
+}
 
 export interface EnemyStats {
   hp: number;
@@ -318,7 +375,8 @@ export interface EnemyStats {
   box: { w: number; h: number };
   scale: number;
   speed: number;
-  /** how far it notices the player */
+  /** how far it notices the player; `ranged.max` must stay under this, or
+   *  the throw can only trigger from inside melee range and never fires */
   sight: number;
   /** how close before it swings */
   range: number;
@@ -328,24 +386,41 @@ export interface EnemyStats {
   /** skeletons raise a shield and shrug off frontal hits */
   guards: boolean;
   score: number;
+  /** the second attack: how and when this monster throws something */
+  ranged?: {
+    /** never used closer than this — the melee swing covers that band */
+    min: number;
+    max: number;
+    /** seconds between throws */
+    cd: number;
+    speed: number;
+    /** downward pull on the shot; the goblin's bomb arcs, the rest fly flat */
+    gravity: number;
+    /** animation progress at which the shot actually leaves the hand */
+    at: number;
+  };
 }
 
 export const ENEMY_STATS: Record<keyof typeof ENEMY_SHEETS, EnemyStats> = {
   mushroom: {
     hp: 12, box: { w: 36, h: 66 }, scale: 2, speed: 52, sight: 240, range: 54,
     touch: 1, flies: false, guards: false, score: 60,
+    ranged: { min: 110, max: 230, cd: 4.0, speed: 250, gravity: 0, at: 0.55 },
   },
   goblin: {
     hp: 18, box: { w: 40, h: 66 }, scale: 2, speed: 108, sight: 360, range: 58,
     touch: 1, flies: false, guards: false, score: 90,
+    ranged: { min: 130, max: 340, cd: 4.8, speed: 300, gravity: 900, at: 0.5 },
   },
   skeleton: {
     hp: 30, box: { w: 46, h: 92 }, scale: 2, speed: 66, sight: 400, range: 86,
     touch: 1, flies: false, guards: true, score: 180,
+    ranged: { min: 150, max: 380, cd: 6.0, speed: 380, gravity: 0, at: 0.5 },
   },
   flyingEye: {
     hp: 12, box: { w: 54, h: 54 }, scale: 2, speed: 130, sight: 460, range: 62,
     touch: 1, flies: true, guards: false, score: 120,
+    ranged: { min: 130, max: 430, cd: 3.6, speed: 330, gravity: 0, at: 0.6 },
   },
 };
 

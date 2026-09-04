@@ -22,6 +22,7 @@ import {
   Animator,
   BOSS_SHEETS,
   ENEMY_SHEETS,
+  ENEMY_SHOTS,
   ENEMY_STATS,
   HERO_INFO,
   HERO_SHEETS,
@@ -30,8 +31,10 @@ import {
   TILE_SRC,
   loadAnimSet,
   loadTerrain,
+  shotSpecs,
   type AnimSet,
   type HeroId,
+  type EnemyStats,
   type PropId,
   type Terrain,
 } from "./sprites";
@@ -51,6 +54,14 @@ const COYOTE = 0.1; // grace period to still jump just after walking off a ledge
 const JUMP_BUFFER = 0.12; // pressing jump slightly early still counts on landing
 const STEP = 1 / 120; // fixed physics step, independent of display refresh rate
 const MAX_CATCHUP = 0.25; // never simulate more than this after a stall
+
+/** A dash is short, fast and mostly invulnerable — the only active defence. */
+const DASH_SPEED = 660;
+const DASH_TIME = 0.16;
+const DASH_CD = 0.6;
+const DASH_IFRAMES = 0.26;
+/** How hard a down-thrust kicks you back up off whatever you landed on. */
+const POGO_BOUNCE = 640;
 
 const IFRAMES = 1.05;
 const HURT_LOCK = 0.28;
@@ -83,6 +94,8 @@ const ATTACKS = {
   heavy: { anim: "attack2", dmg: 17, reach: 62, w: 82, h: 66, from: 0.34, to: 0.72, knock: 280, shake: 4 },
   spear: { anim: "attack3", dmg: 0, reach: 0, w: 0, h: 0, from: 0.4, to: 0.5, knock: 0, shake: 0 },
   slam: { anim: "attack2", dmg: 28, reach: 66, w: 92, h: 72, from: 0.3, to: 0.68, knock: 340, shake: 9 },
+  /** the down-thrust: its box hangs below the feet, so `reach` is unused */
+  pogo: { anim: "attack1", dmg: 9, reach: 0, w: 56, h: 46, from: 0.1, to: 0.95, knock: 60, shake: 3 },
 } as const;
 
 type AttackId = keyof typeof ATTACKS;
@@ -97,6 +110,8 @@ const SLAM_CHARGE = 0.7;
 
 export type Phase = "loading" | "playing" | "paused" | "dead" | "cleared" | "won";
 
+export type Rank = "S" | "A" | "B" | "C";
+
 export interface Hud {
   hearts: number;
   maxHearts: number;
@@ -109,7 +124,16 @@ export interface Hud {
   /** 0..1 while a boss is alive, null otherwise */
   boss: number | null;
   specialCd: number; // 0..1, 1 == ready
+  dashCd: number; // 0..1, 1 == ready
   charging: number; // 0..1
+  /** true once a checkpoint on this level has been lit */
+  checkpoint: boolean;
+  coinsTotal: number;
+  /** hearts lost on this attempt at the level */
+  damage: number;
+  par: number;
+  /** set only on the level-cleared card */
+  rank: Rank | null;
 }
 
 /**
@@ -118,7 +142,8 @@ export interface Hud {
  */
 export type Toast =
   | { kind: "level"; index: number; name: string }
-  | { kind: "bossPhase"; phase: 2 | 3 };
+  | { kind: "bossPhase"; phase: 2 | 3 }
+  | { kind: "checkpoint" };
 
 export interface EngineHooks {
   onPhase: (phase: Phase) => void;
@@ -126,7 +151,8 @@ export interface EngineHooks {
   onToast: (toast: Toast) => void;
 }
 
-export type Action = "left" | "right" | "up" | "down" | "jump" | "light" | "heavy" | "special";
+export type Action =
+  | "left" | "right" | "up" | "down" | "jump" | "light" | "heavy" | "special" | "dash";
 
 interface Body {
   x: number;
@@ -140,11 +166,12 @@ interface Body {
 
 interface Enemy extends Body {
   kind: EnemyKind;
+  rangedCd: number;
   anim: Animator;
   face: 1 | -1;
   hp: number;
   maxHp: number;
-  state: "patrol" | "chase" | "attack" | "hurt" | "dead" | "guard";
+  state: "patrol" | "chase" | "attack" | "ranged" | "hurt" | "dead" | "guard";
   timer: number;
   cooldown: number;
   guardCd: number;
@@ -180,9 +207,15 @@ interface Projectile {
   maxLife: number;
   dmg: number;
   hostile: boolean;
-  kind: "spear" | "orb" | "wave" | "meteor";
+  kind: "spear" | "orb" | "wave" | "meteor" | "thrown";
   spin: number;
   homing: number;
+  /** thrown monster weapons render from a sheet instead of a gradient */
+  anim?: Animator;
+  scale?: number;
+  grav?: number;
+  /** once it has landed it stops moving and plays out its impact frames */
+  burst?: boolean;
 }
 
 interface Pickup {
@@ -324,6 +357,7 @@ export class PlatformerEngine {
   private heroId: HeroId = "huntress";
   private heroSet: AnimSet | null = null;
   private enemySets: Partial<Record<EnemyKind, AnimSet>> = {};
+  private shotSets: Partial<Record<EnemyKind, AnimSet>> = {};
   private bossSet: AnimSet | null = null;
   private terrain: Terrain | null = null;
   private tinted: { bg: HTMLCanvasElement[]; tileset: HTMLCanvasElement } | null = null;
@@ -348,6 +382,13 @@ export class PlatformerEngine {
     charge: number;
     charging: boolean;
     dying: number;
+    /** seconds of dash left; > 0 means gravity and steering are suspended */
+    dash: number;
+    dashCd: number;
+    dashDir: 1 | -1;
+    /** one dash per trip through the air, refreshed by landing or a pogo hit */
+    dashReady: boolean;
+    ghosts: { x: number; y: number; face: 1 | -1; life: number }[];
   };
 
   private enemies: Enemy[] = [];
@@ -357,6 +398,9 @@ export class PlatformerEngine {
   private parts: Particle[] = [];
   private markers: { x: number; t: number; fire: number }[] = [];
   private exit: { x: number; y: number } | null = null;
+  private checkpoints: { x: number; y: number; lit: boolean }[] = [];
+  /** where a death sends you back to — the last lit checkpoint, or the start */
+  private spawn = { x: 0, y: 0 };
 
   private cam = { x: 0, y: 0 };
   private view = { w: VIEW_MAX_W, h: VIEW_H, scale: 1 };
@@ -376,7 +420,10 @@ export class PlatformerEngine {
   private pressed = new Set<Action>();
 
   private coins = 0;
+  private coinsTotal = 0;
   private kills = 0;
+  private damage = 0;
+  private rank: Rank | null = null;
   score = 0;
   phase: Phase = "loading";
 
@@ -394,18 +441,22 @@ export class PlatformerEngine {
   async load(hero: HeroId) {
     this.heroId = hero;
     const kinds = Object.keys(ENEMY_SHEETS) as EnemyKind[];
-    const [heroSet, terrain, bossSet, ...enemySets] = await Promise.all([
+    const [heroSet, terrain, bossSet, ...rest] = await Promise.all([
       loadAnimSet(HERO_SHEETS[hero].base, HERO_SHEETS[hero].specs),
       loadTerrain(),
       loadAnimSet(BOSS_SHEETS.base, BOSS_SHEETS.specs),
       ...kinds.map((k) => loadAnimSet(ENEMY_SHEETS[k].base, ENEMY_SHEETS[k].specs)),
+      ...kinds.map((k) => loadAnimSet(ENEMY_SHEETS[k].base, shotSpecs(ENEMY_SHOTS[k]))),
     ]);
+    const enemySets = rest.slice(0, kinds.length);
+    const shotSets = rest.slice(kinds.length);
     if (this.destroyed) return;
     this.heroSet = heroSet;
     this.terrain = terrain;
     this.bossSet = bossSet;
     kinds.forEach((k, i) => {
       this.enemySets[k] = enemySets[i];
+      this.shotSets[k] = shotSets[i];
     });
     this.tinted = {
       tileset: tint(terrain.tileset, "rgba(60,80,190,0.44)"),
@@ -438,7 +489,7 @@ export class PlatformerEngine {
 
   /* -------------------------------- level setup ---------------------------- */
 
-  loadLevel(idx: number) {
+  loadLevel(idx: number, announce = true) {
     this.levelIdx = Math.max(0, Math.min(LEVELS.length - 1, idx));
     const def = LEVELS[this.levelIdx];
     this.level = parseLevel(def);
@@ -450,7 +501,12 @@ export class PlatformerEngine {
     this.boss = null;
     this.exit = null;
     this.coins = 0;
+    this.coinsTotal = 0;
     this.kills = 0;
+    this.damage = 0;
+    this.rank = null;
+    this.checkpoints = [];
+    this.spawn = { ...this.level.start };
     this.levelTime = 0;
     this.shake = 0;
     this.hitstop = 0;
@@ -460,8 +516,8 @@ export class PlatformerEngine {
 
     const info = HERO_INFO[this.heroId];
     this.player = {
-      x: this.level.start.x,
-      y: this.level.start.y,
+      x: this.spawn.x,
+      y: this.spawn.y,
       w: info.box.w,
       h: info.box.h,
       vx: 0,
@@ -482,11 +538,19 @@ export class PlatformerEngine {
       charge: 0,
       charging: false,
       dying: 0,
+      dash: 0,
+      dashCd: 0,
+      dashDir: 1,
+      dashReady: true,
+      ghosts: [],
     };
 
     for (const s of this.level.spawns) {
       if (s.kind === "coin" || s.kind === "heart") {
         this.pickups.push({ x: s.x, y: s.y, kind: s.kind, taken: false, t: Math.random() * 6 });
+        if (s.kind === "coin") this.coinsTotal++;
+      } else if (s.kind === "checkpoint") {
+        this.checkpoints.push({ x: s.x, y: s.y + TILE / 2, lit: false });
       } else if (s.kind === "exit") {
         this.exit = { x: s.x, y: s.y };
       } else if (s.kind === "boss") {
@@ -502,7 +566,7 @@ export class PlatformerEngine {
     this.cam.y = this.player.y;
     this.setPhase("playing");
     this.audio.setTrack(def.biome === "arena" ? "boss" : this.levelIdx >= 2 ? "tense" : "calm");
-    this.hooks.onToast({ kind: "level", index: this.levelIdx + 1, name: def.name });
+    if (announce) this.hooks.onToast({ kind: "level", index: this.levelIdx + 1, name: def.name });
     this.emitHud();
   }
 
@@ -528,6 +592,7 @@ export class PlatformerEngine {
       state: "patrol",
       timer: 0,
       cooldown: Math.random() * 0.8,
+      rangedCd: 1.2 + Math.random() * 2,
       guardCd: 2 + Math.random() * 2,
       dying: 0,
       hitFlash: 0,
@@ -636,6 +701,42 @@ export class PlatformerEngine {
     this.loadLevel(this.levelIdx);
   }
 
+  /**
+   * Continue from the last lit checkpoint.
+   *
+   * Everything hostile is rebuilt from the map — enemies you already killed
+   * come back — but coins, score and lit checkpoints survive, so a death costs
+   * you the walk back and nothing else. Without this, dying at the exit means
+   * replaying ninety seconds, which is the single most annoying thing a
+   * platformer can do to you.
+   */
+  respawn() {
+    const keptCoins = this.coins;
+    const keptScore = this.score;
+    const keptKills = this.kills;
+    const keptDamage = this.damage;
+    const taken = this.pickups.filter((p) => p.taken).map((p) => `${p.x},${p.y}`);
+    const lit = this.checkpoints.filter((c) => c.lit).map((c) => c.x);
+    const spawn = { ...this.spawn };
+
+    this.loadLevel(this.levelIdx, false);
+
+    this.spawn = spawn;
+    this.player.x = spawn.x;
+    this.player.y = spawn.y;
+    this.cam.x = spawn.x;
+    this.cam.y = spawn.y;
+    this.coins = keptCoins;
+    this.score = keptScore;
+    this.kills = keptKills;
+    this.damage = keptDamage;
+    const takenSet = new Set(taken);
+    for (const p of this.pickups) if (takenSet.has(`${p.x},${p.y}`)) p.taken = true;
+    const litSet = new Set(lit);
+    for (const c of this.checkpoints) if (litSet.has(c.x)) c.lit = true;
+    this.emitHud();
+  }
+
   next() {
     if (this.levelIdx + 1 < LEVELS.length) this.loadLevel(this.levelIdx + 1);
     else this.setPhase("won");
@@ -697,7 +798,10 @@ export class PlatformerEngine {
     p.anim.update(dt);
     p.invuln = Math.max(0, p.invuln - dt);
     p.specialCd = Math.max(0, p.specialCd - dt);
+    p.dashCd = Math.max(0, p.dashCd - dt);
     p.lock = Math.max(0, p.lock - dt);
+    for (const g of p.ghosts) g.life -= dt;
+    p.ghosts = p.ghosts.filter((g) => g.life > 0);
 
     if (p.state === "dead") {
       p.vx *= 0.86;
@@ -726,8 +830,9 @@ export class PlatformerEngine {
       }
     } else if (p.state !== "hurt") {
       const info = HERO_INFO[this.heroId];
-      if (this.pressed.has("light")) this.beginAttack("light");
-      else if (this.pressed.has("heavy")) this.beginAttack("heavy");
+      const wantsDown = !p.onGround && this.held.has("down");
+      if (this.pressed.has("light")) this.beginAttack(wantsDown ? "pogo" : "light");
+      else if (this.pressed.has("heavy")) this.beginAttack(wantsDown ? "pogo" : "heavy");
       else if (info.special === "spear") {
         if (this.pressed.has("special") && p.specialCd <= 0) this.beginAttack("spear");
       } else if (this.held.has("special") && p.specialCd <= 0) {
@@ -742,10 +847,43 @@ export class PlatformerEngine {
       }
     }
 
+    /* --- dash --- */
+    if (p.dash > 0) {
+      p.dash -= dt;
+      p.vx = p.dashDir * DASH_SPEED;
+      p.vy = 0;
+      if (this.frame % 2 === 0) p.ghosts.push({ x: p.x, y: p.y, face: p.face, life: 0.18 });
+      if (p.dash <= 0) p.vx *= 0.45; // bleed most of the speed off on exit
+    } else if (
+      this.pressed.has("dash") &&
+      p.dashCd <= 0 &&
+      p.dashReady &&
+      p.state !== "hurt"
+    ) {
+      p.dash = DASH_TIME;
+      p.dashCd = DASH_CD;
+      p.dashDir = p.face;
+      p.dashReady = p.onGround; // in the air this spends the one air dash
+      p.invuln = Math.max(p.invuln, DASH_TIME + DASH_IFRAMES);
+      p.attack = null;
+      if (p.state === "attack") p.state = p.onGround ? "idle" : "fall";
+      p.charging = false;
+      p.charge = 0;
+      this.audio.play("dash");
+      this.puff(p.x, p.y, 8, "#cfe9ff");
+    }
+
     /* --- horizontal --- */
     const control =
-      p.state === "attack" ? 0.28 : p.state === "hurt" ? 0 : p.onGround ? 1 : AIR_CONTROL;
-    if (dir !== 0 && control > 0) {
+      p.dash > 0 ? 0
+      : p.state === "attack" ? 0.28
+      : p.state === "hurt" ? 0
+      : p.onGround ? 1
+      : AIR_CONTROL;
+    if (p.dash > 0) {
+      // a dash owns the horizontal axis outright: no steering, and no friction
+      // either, which would otherwise bleed most of the speed away mid-dash
+    } else if (dir !== 0 && control > 0) {
       p.vx += dir * RUN_ACCEL * control * dt;
       const cap = RUN_SPEED * (p.charging ? 0.45 : 1);
       p.vx = Math.max(-cap, Math.min(cap, p.vx));
@@ -761,7 +899,7 @@ export class PlatformerEngine {
     if (p.onGround) p.coyote = COYOTE;
     else p.coyote = Math.max(0, p.coyote - dt);
 
-    if (p.buffer > 0 && p.coyote > 0 && p.state !== "hurt" && p.state !== "attack") {
+    if (p.buffer > 0 && p.coyote > 0 && p.dash <= 0 && p.state !== "hurt" && p.state !== "attack") {
       p.vy = -JUMP_SPEED;
       p.onGround = false;
       p.coyote = 0;
@@ -774,14 +912,26 @@ export class PlatformerEngine {
 
     /* --- integrate --- */
     const wasAir = !p.onGround;
-    p.vy = Math.min(MAX_FALL, p.vy + GRAVITY * dt);
-    moveBody(this.level, p, dt, this.held.has("down"));
+    if (p.dash <= 0) p.vy = Math.min(MAX_FALL, p.vy + GRAVITY * dt);
+    // dropping through a one-way needs Down without an attack held on it
+    moveBody(this.level, p, dt, this.held.has("down") && p.state !== "attack");
     if (wasAir && p.onGround) {
+      p.dashReady = true;
       this.audio.play("land");
       this.puff(p.x, p.y + p.h / 2, 6, "#cfe9ff");
     }
 
     if (this.touchesSpike(p)) this.hurtPlayer(1, Math.sign(p.vx) || -p.face);
+
+    for (const c of this.checkpoints) {
+      if (c.lit || Math.abs(c.x - p.x) > 40 || Math.abs(c.y - p.y) > 70) continue;
+      c.lit = true;
+      this.spawn = { x: c.x, y: this.level.start.y };
+      this.audio.play("checkpoint");
+      this.puff(c.x, c.y - 30, 16, "#ffb347");
+      this.hooks.onToast({ kind: "checkpoint" });
+      this.emitHud();
+    }
 
     /* --- animation --- */
     if (p.state !== "attack" && p.state !== "hurt") {
@@ -856,10 +1006,22 @@ export class PlatformerEngine {
     const pr = p.anim.progress;
     if (pr < a.from || pr > a.to) return;
 
+    const down = p.attack === "pogo";
     const reach = a.reach * (this.heroId === "knight" ? 1.12 : 1);
-    const hx = p.x + p.face * (reach + a.w / 2 - 10);
-    const hy = p.y - 4;
+    const hx = down ? p.x : p.x + p.face * (reach + a.w / 2 - 10);
+    const hy = down ? p.y + p.h / 2 + a.h / 2 - 8 : p.y - 4;
     let hit = false;
+
+    // a thrust also bounces off spikes — the classic way to cross them
+    if (down && !hit) {
+      const sy = hy + a.h / 2 - 4;
+      for (const ox of [-a.w / 2 + 6, 0, a.w / 2 - 6]) {
+        if (tileAt(this.level, hx + ox, sy) === Tile.Spike) {
+          this.pogoBounce();
+          return;
+        }
+      }
+    }
 
     for (const e of this.enemies) {
       if (e.state === "dead") continue;
@@ -879,18 +1041,39 @@ export class PlatformerEngine {
       p.attackHit = true;
       this.hitstop = p.attack === "light" ? 0.045 : 0.085;
       this.shake = Math.max(this.shake, a.shake);
+      if (down) this.pogoBounce();
     }
+  }
+
+  /**
+   * Kick back up off a successful down-thrust. The dash comes back with it,
+   * which is what turns a single bounce into a chain across a pit.
+   */
+  private pogoBounce() {
+    const p = this.player;
+    p.vy = -POGO_BOUNCE;
+    p.state = "fall";
+    p.attack = null;
+    p.attackHit = true;
+    p.dashReady = true;
+    p.coyote = 0;
+    this.hitstop = 0.07;
+    this.shake = Math.max(this.shake, 4);
+    this.audio.play("pogo");
+    this.puff(p.x, p.y + p.h / 2, 8, "#ffe9a8");
   }
 
   private hurtPlayer(dmg: number, from: number) {
     const p = this.player;
     if (p.invuln > 0 || p.state === "dead") return;
     p.hearts -= dmg;
+    this.damage += dmg;
     p.invuln = IFRAMES;
     p.lock = HURT_LOCK;
     p.vx = -from * HURT_KNOCK;
     p.vy = -260;
     p.attack = null;
+    p.dash = 0;
     p.charging = false;
     p.charge = 0;
     this.shake = 6;
@@ -956,6 +1139,7 @@ export class PlatformerEngine {
       const sees = onScreen && p.state !== "dead" && dist < st.sight && Math.abs(dy) < 190;
 
       e.cooldown = Math.max(0, e.cooldown - dt);
+      e.rangedCd = Math.max(0, e.rangedCd - dt);
       e.guardCd = Math.max(0, e.guardCd - dt);
 
       if (e.state === "hurt") {
@@ -965,6 +1149,17 @@ export class PlatformerEngine {
         e.timer -= dt;
         e.vx = 0;
         if (e.timer <= 0) e.state = "chase";
+      } else if (e.state === "ranged") {
+        e.vx *= 0.75;
+        const st2 = st.ranged;
+        if (st2 && !e.didHit && e.anim.progress > st2.at) {
+          e.didHit = true;
+          this.throwShot(e, st2);
+        }
+        if (e.anim.done) {
+          e.state = "chase";
+          e.cooldown = 0.5;
+        }
       } else if (e.state === "attack") {
         e.vx *= 0.8;
         const pr = e.anim.progress;
@@ -986,6 +1181,17 @@ export class PlatformerEngine {
           e.state = "attack";
           e.didHit = false;
           e.anim.play("attack", true);
+        } else if (
+          st.ranged &&
+          e.rangedCd <= 0 &&
+          dist > st.ranged.min &&
+          dist < st.ranged.max &&
+          Math.abs(dy) < 120
+        ) {
+          e.state = "ranged";
+          e.didHit = false;
+          e.rangedCd = st.ranged.cd;
+          e.anim.play("ranged", true);
         } else if (st.guards && e.guardCd <= 0 && dist < st.range * 2.2) {
           e.state = "guard";
           e.timer = 0.55;
@@ -1038,6 +1244,7 @@ export class PlatformerEngine {
 
       e.anim.play(
         e.state === "attack" ? "attack"
+        : e.state === "ranged" ? "ranged"
         : e.state === "guard" ? "shield"
         : e.state === "hurt" ? "hit"
         : Math.abs(e.vx) > 12 ? "run"
@@ -1046,6 +1253,48 @@ export class PlatformerEngine {
     }
 
     this.enemies = this.enemies.filter((e) => e.state !== "dead" || e.dying < 1.4);
+  }
+
+  /**
+   * Launch a monster's thrown weapon. Flat shots are aimed straight at the
+   * player; the goblin's bomb gets a lobbed arc solved for the same target, so
+   * it lands on you instead of at your feet.
+   */
+  private throwShot(e: Enemy, r: NonNullable<EnemyStats["ranged"]>) {
+    const set = this.shotSets[e.kind];
+    if (!set) return;
+    const p = this.player;
+    const spec = ENEMY_SHOTS[e.kind];
+    const ox = e.x + e.face * e.w * 0.5;
+    const oy = e.y - e.h * 0.15;
+    let vx: number;
+    let vy: number;
+    if (r.gravity > 0) {
+      // pick the flight time from the horizontal gap, then solve vy for it
+      const dx = p.x - ox;
+      const t = Math.max(0.35, Math.min(1.4, Math.abs(dx) / r.speed));
+      vx = dx / t;
+      vy = (p.y - 20 - oy) / t - 0.5 * r.gravity * t;
+    } else {
+      const a = Math.atan2(p.y - 10 - oy, p.x - ox);
+      vx = Math.cos(a) * r.speed;
+      vy = Math.sin(a) * r.speed;
+    }
+    this.shots.push({
+      x: ox, y: oy, vx, vy,
+      r: spec.r,
+      life: 4,
+      maxLife: 4,
+      dmg: 1,
+      hostile: true,
+      kind: "thrown",
+      spin: 0,
+      homing: 0,
+      anim: new Animator(set, "fly"),
+      scale: spec.scale,
+      grav: r.gravity,
+    });
+    this.audio.play("throw");
   }
 
   private damageEnemy(e: Enemy, dmg: number, dir: number, knock: number) {
@@ -1357,6 +1606,12 @@ export class PlatformerEngine {
     for (const s of this.shots) {
       s.life -= dt;
       s.spin += dt * 10;
+      s.anim?.update(dt);
+      if (s.burst) {
+        if (s.anim?.done) s.life = 0;
+        continue; // an impact stays put and plays itself out
+      }
+      if (s.grav) s.vy += s.grav * dt;
       if (s.homing > 0 && p.state !== "dead") {
         const want = Math.atan2(p.y - s.y, p.x - s.x);
         const sp = Math.hypot(s.vx, s.vy);
@@ -1372,15 +1627,14 @@ export class PlatformerEngine {
       s.y += s.vy * dt;
 
       if (s.kind !== "wave" && rectHitsSolid(this.level, s.x, s.y, s.r, s.r)) {
-        s.life = 0;
-        this.puff(s.x, s.y, 8, s.hostile ? "#b678ff" : "#ffd27a");
+        this.burstShot(s);
         continue;
       }
 
       if (s.hostile) {
         if (p.state !== "dead" && overlaps(s.x, s.y, s.r * 2, s.r * 2, p.x, p.y, p.w, p.h)) {
           this.hurtPlayer(s.dmg, Math.sign(s.vx) || 1);
-          s.life = 0;
+          this.burstShot(s);
         }
       } else {
         for (const e of this.enemies) {
@@ -1400,6 +1654,22 @@ export class PlatformerEngine {
       }
     }
     this.shots = this.shots.filter((s) => s.life > 0);
+  }
+
+  /** End a projectile: sheet-backed ones play their impact frames in place. */
+  private burstShot(s: Projectile) {
+    if (s.burst) return;
+    if (s.anim) {
+      s.burst = true;
+      s.vx = 0;
+      s.vy = 0;
+      s.grav = 0;
+      s.life = 1.2;
+      s.anim.play("burst", true);
+    } else {
+      s.life = 0;
+    }
+    this.puff(s.x, s.y, 8, s.hostile ? "#b678ff" : "#ffd27a");
   }
 
   /* -------------------------------- pickups -------------------------------- */
@@ -1431,7 +1701,23 @@ export class PlatformerEngine {
     }
   }
 
+  /**
+   * Grade the run out of a hundred: coins found, hearts kept, time against the
+   * level's par. Every number is one the HUD already tracks, so this costs
+   * nothing to keep honest.
+   */
+  private computeRank(): Rank {
+    const coinPct = this.coinsTotal > 0 ? this.coins / this.coinsTotal : 1;
+    const par = this.level.par;
+    let pts = 40 * coinPct;
+    pts += 35 * Math.max(0, 1 - this.damage / 4);
+    pts += 25 * Math.max(0, Math.min(1, (par * 2 - this.levelTime) / par));
+    return pts >= 90 ? "S" : pts >= 74 ? "A" : pts >= 55 ? "B" : "C";
+  }
+
   private clearLevel() {
+    this.rank = this.computeRank();
+    this.score += { S: 1500, A: 900, B: 400, C: 0 }[this.rank];
     this.score += CLEAR_BONUS + Math.max(0, Math.round((150 - this.levelTime) * 4));
     this.audio.play("clear");
     this.audio.stopMusic();
@@ -1513,7 +1799,13 @@ export class PlatformerEngine {
       time: this.levelTime,
       boss: this.boss ? this.boss.hp / this.boss.maxHp : null,
       specialCd: 1 - (this.player?.specialCd ?? 0) / cd,
+      dashCd: 1 - (this.player?.dashCd ?? 0) / DASH_CD,
       charging: (this.player?.charge ?? 0) / SLAM_CHARGE,
+      checkpoint: this.checkpoints.some((c) => c.lit),
+      coinsTotal: this.coinsTotal,
+      damage: this.damage,
+      par: this.level?.par ?? 0,
+      rank: this.rank,
     });
   }
 
@@ -1580,6 +1872,7 @@ export class PlatformerEngine {
     this.drawProps(ctx, 0);
     this.drawTiles(ctx, camX, camY);
     this.drawProps(ctx, 1);
+    this.drawCheckpoints(ctx);
     this.drawExit(ctx);
     this.drawPickups(ctx);
     this.drawMarkers(ctx);
@@ -1752,6 +2045,43 @@ export class PlatformerEngine {
     }
   }
 
+  /** A brazier: dark and cold until you touch it, then lit and drifting. */
+  private drawCheckpoints(ctx: CanvasRenderingContext2D) {
+    for (const c of this.checkpoints) {
+      if (Math.abs(c.x - this.cam.x) > this.view.w / 2 + 60) continue;
+      const base = c.y;
+      ctx.save();
+      ctx.translate(Math.round(c.x), Math.round(base));
+      ctx.fillStyle = "#153c4a";
+      ctx.fillRect(-4, -34, 8, 34);
+      ctx.fillStyle = "#2c645e";
+      ctx.fillRect(-13, -4, 26, 6);
+      ctx.fillRect(-11, -42, 22, 10);
+      ctx.strokeStyle = "#052137";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-11, -42, 22, 10);
+      if (c.lit) {
+        const f = 1 + Math.sin(this.t * 7 + c.x) * 0.16;
+        const g = ctx.createRadialGradient(0, -50, 2, 0, -50, 40 * f);
+        g.addColorStop(0, "rgba(255,240,180,0.95)");
+        g.addColorStop(0.35, "rgba(255,150,60,0.7)");
+        g.addColorStop(1, "rgba(255,90,30,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(0, -50, 40 * f, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffd45e";
+        ctx.beginPath();
+        ctx.moveTo(-7, -42);
+        ctx.quadraticCurveTo(-3, -56 * f, 0, -64 * f);
+        ctx.quadraticCurveTo(3, -56 * f, 7, -42);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
   private drawExit(ctx: CanvasRenderingContext2D) {
     const e = this.exit;
     if (!e) return;
@@ -1864,7 +2194,26 @@ export class PlatformerEngine {
     if (p.invuln > 0 && p.state !== "dead") {
       ctx.globalAlpha = 0.35 + 0.65 * Math.abs(Math.sin(this.t * 26));
     }
+    for (const g of p.ghosts) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, g.life / 0.18) * 0.34;
+      p.anim.draw(ctx, g.x, g.y + p.h / 2, g.face, info.scale);
+      ctx.restore();
+    }
     this.shadow(ctx, p.x, p.y + p.h / 2, p.w * 1.1);
+    if (p.attack === "pogo") {
+      // the sheets have no downward stab, so the arc under the feet sells it
+      const a = ATTACKS.pogo;
+      const y = p.y + p.h / 2 + 10;
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = "#ffe9a8";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(p.x, y - a.h * 0.4, a.w * 0.52, Math.PI * 0.12, Math.PI * 0.88);
+      ctx.stroke();
+      ctx.restore();
+    }
     if (p.charging) {
       const c = p.charge / SLAM_CHARGE;
       ctx.save();
@@ -1884,6 +2233,14 @@ export class PlatformerEngine {
     for (const s of this.shots) {
       ctx.save();
       ctx.translate(s.x, s.y);
+      if (s.anim) {
+        // thrown weapons point where they are going, but an impact stays level
+        if (!s.burst) ctx.rotate(Math.atan2(s.vy, s.vx) + (s.vx < 0 ? Math.PI : 0));
+        if (!s.burst && s.vx < 0) ctx.scale(1, -1);
+        s.anim.draw(ctx, 0, 0, 1, s.scale ?? 1.5, "centre");
+        ctx.restore();
+        continue;
+      }
       if (s.kind === "spear") {
         if (s.vx < 0) ctx.scale(-1, 1);
         ctx.fillStyle = "#ffe9a8";

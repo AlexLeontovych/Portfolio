@@ -9,6 +9,7 @@
 
 type Voice = "jump" | "land" | "swing" | "hitEnemy" | "hurt" | "coin" | "heart"
   | "kill" | "spear" | "charge" | "slam" | "die" | "clear" | "select"
+  | "dash" | "pogo" | "throw" | "checkpoint"
   | "bossCast" | "bossHurt" | "bossDie";
 
 const SCALE = [0, 2, 3, 5, 7, 8, 10, 12]; // natural minor — the sad-hero mode
@@ -141,6 +142,25 @@ export class GameAudio {
         this.tone(520, 0.1, "triangle", 0.2);
         this.tone(780, 0.1, "triangle", 0.2, undefined, 0.09);
         this.tone(1040, 0.22, "triangle", 0.2, undefined, 0.18);
+        break;
+      case "dash":
+        this.noise(0.16, 0.18, 900, 7000);
+        this.tone(520, 0.12, "triangle", 0.1, 1100);
+        break;
+      case "pogo":
+        // a bright metallic ping, so a chained bounce reads as a combo
+        this.tone(880, 0.1, "square", 0.16, 1500);
+        this.tone(1320, 0.16, "triangle", 0.12, undefined, 0.04);
+        this.noise(0.07, 0.2, 1800, 9000);
+        break;
+      case "throw":
+        this.noise(0.11, 0.14, 500, 3800);
+        this.tone(280, 0.12, "triangle", 0.1, 160);
+        break;
+      case "checkpoint":
+        [0, 4, 7, 11].forEach((s, i) =>
+          this.tone(330 * Math.pow(2, s / 12), 0.34, "triangle", 0.17, undefined, i * 0.075),
+        );
         break;
       case "spear":
         this.tone(880, 0.18, "sawtooth", 0.14, 300);

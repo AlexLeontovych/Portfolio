@@ -49,6 +49,7 @@ const KEYS: Record<string, Action> = {
   j: "light", x: "light",
   k: "heavy", c: "heavy",
   l: "special", v: "special",
+  shift: "dash", q: "dash",
 };
 
 /** A looping sprite preview, so the hero cards show the actual animation. */
@@ -240,7 +241,10 @@ export default function Platformer() {
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine) return;
-    if (phase === "cleared") platformer.unlock(Math.min(LEVELS.length - 1, engine.levelIndex + 1));
+    if (phase === "cleared") {
+      platformer.unlock(Math.min(LEVELS.length - 1, engine.levelIndex + 1));
+      if (hud?.rank) platformer.recordRank(engine.levelIndex, hud.rank);
+    }
     if (phase === "won" || phase === "dead") platformer.recordScore(engine.score);
   }, [phase]);
 
@@ -382,12 +386,22 @@ export default function Platformer() {
               <span className={styles.coin}>{hud.coins}</span>
               <span className={styles.score}>{String(hud.score).padStart(6, "0")}</span>
             </div>
-            <div
-              className={styles.special}
-              data-ready={hud.specialCd >= 1}
-              style={{ ["--fill" as string]: `${Math.round(Math.min(1, hud.specialCd) * 100)}%` }}
-            >
-              <span>{specialName}</span>
+            <div className={styles.meters}>
+              <div
+                className={styles.special}
+                data-ready={hud.specialCd >= 1}
+                style={{ ["--fill" as string]: `${Math.round(Math.min(1, hud.specialCd) * 100)}%` }}
+              >
+                <span>{specialName}</span>
+              </div>
+              <div
+                className={styles.dash}
+                data-ready={hud.dashCd >= 1}
+                style={{ ["--fill" as string]: `${Math.round(Math.min(1, hud.dashCd) * 100)}%` }}
+                title={t("plat.dash")}
+              >
+                <span>»</span>
+              </div>
             </div>
           </div>
 
@@ -408,7 +422,9 @@ export default function Platformer() {
             <div className={styles.toast}>
               {toast.kind === "level"
                 ? `${toast.index}. ${toast.name}`
-                : t(`plat.boss_phase_${toast.phase}`)}
+                : toast.kind === "checkpoint"
+                  ? t("plat.checkpoint")
+                  : t(`plat.boss_phase_${toast.phase}`)}
             </div>
           )}
         </>
@@ -420,8 +436,10 @@ export default function Platformer() {
           <div className={styles.padLeft}>
             <button type="button" className={styles.padBtn} {...holdProps("left")} aria-label="←">◀</button>
             <button type="button" className={styles.padBtn} {...holdProps("right")} aria-label="→">▶</button>
+            <button type="button" className={styles.padBtn} {...holdProps("down")} aria-label="↓">▼</button>
           </div>
           <div className={styles.padRight}>
+            <button type="button" className={styles.padBtn} {...holdProps("dash")} aria-label={t("plat.dash")}>»</button>
             <button type="button" className={styles.padBtn} {...holdProps("special")} aria-label={specialName}>✦</button>
             <button type="button" className={styles.padBtn} {...holdProps("heavy")} aria-label="heavy">✹</button>
             <button type="button" className={styles.padBtn} {...holdProps("light")} aria-label="light">⚔</button>
@@ -463,9 +481,18 @@ export default function Platformer() {
         <div className={styles.cardWrap}>
           <div className={styles.card}>
             <h3 className={`${styles.cardTitle} ${styles.dead}`}>{t("plat.dead")}</h3>
-            <p className={styles.cardBody}>{t("plat.dead_body")}</p>
+            <p className={styles.cardBody}>
+              {hud?.checkpoint ? t("plat.dead_checkpoint") : t("plat.dead_body")}
+            </p>
             <div className={styles.actions}>
-              <button type="button" className={styles.pixBtn} onClick={() => engineRef.current?.restart()}>
+              <button type="button" className={styles.pixBtn} onClick={() => engineRef.current?.respawn()}>
+                {t("plat.continue")}
+              </button>
+              <button
+                type="button"
+                className={`${styles.pixBtn} ${styles.pixBtnGhost}`}
+                onClick={() => engineRef.current?.restart()}
+              >
                 {t("plat.retry")}
               </button>
               <button type="button" className={`${styles.pixBtn} ${styles.pixBtnGhost}`} onClick={() => setScreen("select")}>
@@ -484,10 +511,19 @@ export default function Platformer() {
           <div className={styles.card}>
             <h3 className={`${styles.cardTitle} ${styles.win}`}>{t("plat.cleared")}</h3>
             <p className={styles.cardBody}>{hud.levelName}</p>
+            {hud.rank && (
+              <div className={styles.rankWrap}>
+                <span className={styles.rankLetter} data-rank={hud.rank}>{hud.rank}</span>
+                <span className={styles.rankNote}>{t(`plat.rank_${hud.rank.toLowerCase()}`)}</span>
+              </div>
+            )}
             <dl className={styles.results}>
-              <div><dt>{t("plat.coins")}</dt><dd>{hud.coins}</dd></div>
-              <div><dt>{t("plat.kills")}</dt><dd>{hud.kills}</dd></div>
-              <div><dt>{t("plat.time")}</dt><dd>{hud.time.toFixed(1)}s</dd></div>
+              <div><dt>{t("plat.coins")}</dt><dd>{hud.coins}/{hud.coinsTotal}</dd></div>
+              <div><dt>{t("plat.damage")}</dt><dd>{hud.damage}</dd></div>
+              <div>
+                <dt>{t("plat.time")}</dt>
+                <dd data-good={hud.time <= hud.par}>{hud.time.toFixed(1)}s</dd>
+              </div>
               <div><dt>{t("plat.score")}</dt><dd>{hud.score}</dd></div>
             </dl>
             <div className={styles.actions}>
