@@ -72,6 +72,9 @@ const MILESTONES: [string, string][] = [
 const MILESTONE_VSEGS = [350, 850, 1400, 1950, 2500];
 const GATE_VSEG = 3000; // ~50-55s in: the "YOUR COMPANY HERE?" finish gate
 
+/** Obstacles are runtime errors: short tokens stay legible as the block grows. */
+const ERROR_TOKENS = ["ERROR", "NaN", "NULL", "404", "undefined"];
+
 const BEST_KEY = "portfolio-arcade-best";
 const VIEW_KEY = "portfolio-arcade-view";
 const TILT_KEY = "portfolio-arcade-tilt";
@@ -161,6 +164,91 @@ function bakeEmoji(glyph: string, size: number): HTMLCanvasElement {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(glyph, c.width / 2, c.height / 2 + size * 0.04);
+  return c;
+}
+
+/**
+ * A red "runtime error" road block: neon-bordered panel with the error token,
+ * baked at 2x. Two variants per token — idle and flashing — so the blink in the
+ * game loop is a sprite swap rather than per-frame glow work.
+ */
+function bakeErrorBlock(token: string, flash: boolean): HTMLCanvasElement {
+  const W = 320;
+  const H = 192;
+  const [c, ctx] = makeCanvas(W, H);
+  const pad = 26; // room for the baked glow
+  const x = pad;
+  const y = pad;
+  const w = W - pad * 2;
+  const h = H - pad * 2;
+
+  const edge = flash ? "#ffe9ec" : "#ff3355";
+  const glow = flash ? "rgba(255, 90, 120, 0.95)" : "rgba(255, 45, 80, 0.7)";
+
+  /* body + baked outer glow */
+  ctx.save();
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = flash ? 34 : 20;
+  const fill = ctx.createLinearGradient(0, y, 0, y + h);
+  fill.addColorStop(0, flash ? "#4a0a18" : "#2a0512");
+  fill.addColorStop(1, flash ? "#2a0510" : "#16030a");
+  ctx.fillStyle = fill;
+  rrect(ctx, x, y, w, h, 16);
+  ctx.fill();
+  ctx.restore();
+
+  /* CRT scanlines inside the panel */
+  ctx.save();
+  rrect(ctx, x, y, w, h, 16);
+  ctx.clip();
+  ctx.fillStyle = "rgba(255, 60, 90, 0.09)";
+  for (let sy2 = y; sy2 < y + h; sy2 += 6) ctx.fillRect(x, sy2, w, 2);
+  ctx.restore();
+
+  /* neon border, doubled for a hot inner edge */
+  ctx.strokeStyle = edge;
+  ctx.lineWidth = flash ? 7 : 5;
+  rrect(ctx, x, y, w, h, 16);
+  ctx.stroke();
+  ctx.strokeStyle = flash ? "rgba(255,255,255,0.95)" : "rgba(255, 140, 165, 0.55)";
+  ctx.lineWidth = 2;
+  rrect(ctx, x + 7, y + 7, w - 14, h - 14, 10);
+  ctx.stroke();
+
+  /* corner ticks — reads as a warning marker even when the text is tiny */
+  ctx.strokeStyle = edge;
+  ctx.lineWidth = 4;
+  const tick = 14;
+  for (const [cx2, cy2, dx, dy] of [
+    [x + 4, y + 4, 1, 1],
+    [x + w - 4, y + 4, -1, 1],
+    [x + 4, y + h - 4, 1, -1],
+    [x + w - 4, y + h - 4, -1, -1],
+  ] as [number, number, number, number][]) {
+    ctx.beginPath();
+    ctx.moveTo(cx2 + dx * tick, cy2);
+    ctx.lineTo(cx2, cy2);
+    ctx.lineTo(cx2, cy2 + dy * tick);
+    ctx.stroke();
+  }
+
+  /* the token, auto-fitted so even "undefined" stays inside the panel */
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  let size = 46;
+  const maxW = w - 34;
+  do {
+    ctx.font = `${size}px "Press Start 2P", monospace`;
+    if (ctx.measureText(token).width <= maxW) break;
+    size -= 2;
+  } while (size > 10);
+  ctx.save();
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = flash ? 18 : 10;
+  ctx.fillStyle = flash ? "#ffffff" : "#ffc2cc";
+  ctx.fillText(token, W / 2, H / 2 + 2);
+  ctx.restore();
+
   return c;
 }
 
@@ -342,7 +430,8 @@ export class ArcadeEngine {
   private showFps = false;
 
   // pre-baked art (rebuilt on resize where size-dependent)
-  private bugSprite: Baked;
+  /** [token][0 = idle, 1 = flashing] — the blink is a sprite swap, not a repaint */
+  private errSprites: Baked[][] = [];
   private boomSprite: Baked;
   private coinSprite: Baked;
   // roadside cameos of the portfolio page's 2D roadside props
@@ -446,9 +535,15 @@ export class ArcadeEngine {
     this.mountain2Pts = ridge(mulberry(1291), 12, 0.1, 0.26);
 
     // ---- size-independent sprite bakes ----
-    const bug = bakeEmoji("🐞", 112);
-    this.bugSprite = bug;
-    this.promote(bug, (b) => (this.bugSprite = b));
+    ERROR_TOKENS.forEach((token, i) => {
+      this.errSprites[i] = [];
+      for (const flash of [false, true]) {
+        const k = flash ? 1 : 0;
+        const c = bakeErrorBlock(token, flash);
+        this.errSprites[i][k] = c;
+        this.promote(c, (b) => (this.errSprites[i][k] = b));
+      }
+    });
     const boom = bakeEmoji("💥", 160);
     this.boomSprite = boom;
     this.promote(boom, (b) => (this.boomSprite = b));
@@ -511,7 +606,7 @@ export class ArcadeEngine {
       this.ridge2,
       this.carSprite,
       this.carSpriteBrake,
-      this.bugSprite,
+      ...this.errSprites.flat(),
       this.boomSprite,
       this.coinSprite,
       ...this.signSprites,
@@ -904,7 +999,12 @@ export class ArcadeEngine {
     while (this.nextObstacle < horizon) {
       const lane = LANES[Math.floor(Math.random() * LANES.length)] + (Math.random() - 0.5) * 0.16;
       if (Math.random() < 0.62) {
-        this.sprites.push({ vseg: this.nextObstacle, offset: lane, type: "bug" });
+        this.sprites.push({
+          vseg: this.nextObstacle,
+          offset: lane,
+          type: "bug",
+          variant: Math.floor(Math.random() * ERROR_TOKENS.length),
+        });
       } else {
         const n = 4 + Math.floor(Math.random() * 3);
         for (let i = 0; i < n; i++) {
@@ -964,7 +1064,7 @@ export class ArcadeEngine {
           // half-widths match the drawn sizes (+ half a car): bugs/pylons no
           // longer kill with visible daylight, coins are deliberately generous
           const w =
-            s.type === "bug" ? 0.2 : s.type === "coin" ? 0.36 : s.type === "sign" ? 0.4 : 0.12;
+            s.type === "bug" ? 0.23 : s.type === "coin" ? 0.36 : s.type === "sign" ? 0.4 : 0.12;
           const adx = Math.abs(this.playerX - s.offset);
           if (s.type === "bug" && adx > w && adx <= w + GRAZE_BAND) {
             // close call! shaving past a bug pays — streak raises the stakes
@@ -2338,9 +2438,15 @@ export class ArcadeEngine {
       // far sprites fade in out of the fog instead of popping fully-formed
       ctx.globalAlpha = Math.min(1, (this.rowsDrawn - sn) / 14);
       if (s.type === "bug") {
-        const size = Math.max(7, r.halfW * 0.24);
-        if (sy - size > H || sx + size < 0 || sx - size > W) continue; // fully off-screen
-        ctx.drawImage(this.bugSprite, sx - size / 2, sy - size * 0.92, size, size);
+        const bw = Math.max(9, r.halfW * 0.42);
+        const bh = bw * 0.6;
+        if (sy - bh > H || sx + bw < 0 || sx - bw > W) continue; // fully off-screen
+        // blink: each block keeps its own phase so the road never pulses in sync
+        const flash = Math.sin(t * 9 + s.vseg * 1.7) > 0.55 ? 1 : 0;
+        const set = this.errSprites[s.variant ?? 0] ?? this.errSprites[0];
+        const img = set?.[flash] ?? set?.[0];
+        if (!img) continue;
+        ctx.drawImage(img, sx - bw / 2, sy - bh * 1.06, bw, bh);
       } else if (s.type === "coin") {
         const cr = Math.max(3, r.halfW * 0.075);
         if (sy - cr * 2.6 > H) continue;
