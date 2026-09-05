@@ -19,6 +19,8 @@ export interface MapDef {
   road: Point[];
   /** build pads, in the order they were traced */
   plots: Point[];
+  /** gate facades drawn OVER the creeps, so they come out from behind the arch */
+  overlay?: string;
 }
 
 export const MAPS: Record<string, MapDef> = {
@@ -26,6 +28,7 @@ export const MAPS: Record<string, MapDef> = {
   oasis: {
     id: "oasis",
     image: "oasis.webp",
+    overlay: "oasis.over.webp",
     road: [
       { x: -28, y: 11 }, { x: 47, y: 75 }, { x: 64, y: 84 }, { x: 80, y: 93 },
       { x: 98, y: 99 }, { x: 116, y: 102 }, { x: 134, y: 105 }, { x: 152, y: 107 },

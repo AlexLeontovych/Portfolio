@@ -52,6 +52,8 @@ export interface Level {
   slots: Point[];
   /** background to draw under everything, or null to draw the board by hand */
   image: string | null;
+  /** gate facades drawn over the creeps, so they come out from behind the arch */
+  overlay: string | null;
 }
 
 const w = (...groups: WaveGroup[]): Wave => ({ groups });
@@ -215,6 +217,7 @@ export function loadLevel(idx: number): Level {
     path,
     slots: map ? map.plots : deriveSlots(path),
     image: map ? map.image : null,
+    overlay: map?.overlay ?? null,
   };
 }
 

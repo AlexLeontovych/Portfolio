@@ -180,26 +180,20 @@ def base_centre(alpha, half=None):
     if not mids:
         return None
     if half is None:
-        # Walk up from the bottom edge: the base disc widens to its equator
-        # and narrows again. The FIRST peak is the equator. A drum that
-        # flares at the top, or pillars that stick out above it, make a
-        # second, higher peak — and taking the widest row outright picked
-        # that one on the tier-3 mage, which set its anchor a third of a
-        # base too high and sat the tower on its pad's front ring.
-        span = max(6, int((bottom - top) * 0.45))
-        w = []
-        for k in range(span + 1):
-            y = bottom - k
+        # The footprint is an ellipse with the same aspect as the pads it
+        # stands on (34 by 24 in board space), so its centre sits 0.35 of
+        # the base's width above the bottom edge. The width is the drum
+        # wall's, read as the median over the rows between a tenth and four
+        # tenths of the way up — below that the corner bushes widen the
+        # silhouette, above it the rim flares and the turret begins.
+        lo = bottom - int((bottom - top) * 0.40)
+        hi = bottom - int((bottom - top) * 0.10)
+        widths = []
+        for y in range(lo, hi + 1):
             xs = np.nonzero(alpha[y] > ALPHA)[0]
-            w.append(int(np.ptp(xs)) if xs.size else 0)
-        w = [int(np.median(w[max(0, k - 1):k + 2])) for k in range(len(w))]
-        peak, at = w[0], 0
-        for k in range(1, len(w)):
-            if w[k] > peak:
-                peak, at = w[k], k
-            elif w[k] < peak * 0.94 and at > 0:
-                break                                   # past the equator
-        half = float(at)
+            if xs.size:
+                widths.append(int(np.ptp(xs)))
+        half = 0.35 * float(np.median(widths)) if widths else (bottom - top) * 0.15
     return float(np.median(mids)), float(bottom - half), half
 
 

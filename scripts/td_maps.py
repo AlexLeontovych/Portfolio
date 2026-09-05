@@ -21,6 +21,7 @@ them; without it the script only re-emits maps.ts from maps.json.
 import json
 import os
 import sys
+import numpy as np
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -54,6 +55,8 @@ export interface MapDef {
   road: Point[];
   /** build pads, in the order they were traced */
   plots: Point[];
+  /** gate facades drawn OVER the creeps, so they come out from behind the arch */
+  overlay?: string;
 }
 
 export const MAPS: Record<string, MapDef> = {
@@ -63,16 +66,64 @@ export const MAPS: Record<string, MapDef> = {
 #: how far past the edge the road runs, so creeps walk on and off rather than
 #: appearing and vanishing at the border
 OVERRUN = 80
+#: half the width of the road, in board px: the strip creeps actually walk on
+BAND = 14
 
 
-def extend_ends(road):
-    """Run the first and last segment out past the edge of the board."""
-    out = [list(p) for p in road]
-    for a, b in ((0, 1), (-1, -2)):
-        dx, dy = out[a][0] - out[b][0], out[a][1] - out[b][1]
-        n = (dx * dx + dy * dy) ** 0.5 or 1.0
-        out[a] = [out[a][0] + dx / n * OVERRUN, out[a][1] + dy / n * OVERRUN]
+def _dilate(m, r):
+    out = m.copy()
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            if dy or dx:
+                out |= np.roll(np.roll(m, dy, axis=0), dx, axis=1)
     return out
+
+
+def road_band(shape, road, half):
+    """Pixels within `half` of the road's centreline."""
+    h, w = shape
+    yy, xx = np.mgrid[0:h, 0:w]
+    near = np.zeros((h, w), dtype=bool)
+    for i in range(len(road) - 1):
+        (ax, ay), (bx, by) = road[i], road[i + 1]
+        dx, dy = bx - ax, by - ay
+        L2 = dx * dx + dy * dy or 1.0
+        t = np.clip(((xx - ax) * dx + (yy - ay) * dy) / L2, 0, 1)
+        near |= (xx - (ax + t * dx)) ** 2 + (yy - (ay + t * dy)) ** 2 <= half * half
+    return near
+
+
+def gate_overlay(board, road, gates):
+    """
+    The parts of the map that must be drawn OVER the creeps.
+
+    A creep walking out of a gate has to come out from behind the arch, not
+    across its face. Colour is no way to pick the arch out — its stones are
+    the colour of the sand — so this goes by geometry: inside each gate's
+    `box` everything is kept except the strip of road the creeps walk on;
+    an `opening` is always left clear (the dark doorway they are seen
+    through) and each of the `keeps` is always solid (a pillar the road runs
+    right past, which the strip would otherwise cut the foot off). Feet stay
+    visible on the road, bodies pass behind the stones, and the layer is
+    drawn after the creeps.
+    """
+    a = np.asarray(board.convert("RGB"), dtype=np.uint8)
+    h, w = a.shape[:2]
+    band = road_band((h, w), road, BAND)
+    out = np.zeros((h, w, 4), dtype=np.uint8)
+    for g in gates:
+        x0, y0, x1, y1 = g["box"]
+        keep = np.zeros((h, w), dtype=bool)
+        keep[y0:y1, x0:x1] = True
+        keep &= ~band
+        if "opening" in g:
+            ox0, oy0, ox1, oy1 = g["opening"]
+            keep[oy0:oy1, ox0:ox1] = False
+        for (kx0, ky0, kx1, ky1) in g.get("keeps", []):
+            keep[ky0:ky1, kx0:kx1] = True
+        out[keep, :3] = a[keep]
+        out[keep, 3] = 255
+    return Image.fromarray(out, "RGBA")
 
 
 def points(pairs):
@@ -104,10 +155,20 @@ def main():
             dst = os.path.join(OUT_IMG, f"{mid}.webp")
             im.save(dst, "WEBP", quality=QUALITY, method=6)
             print(f"  {mid}: {os.path.getsize(dst) / 1024:.0f} kB")
+            if m.get("gates"):
+                # keyed on the 960x540 board, published at the map's size
+                board = im.resize((960, 540), Image.LANCZOS)
+                over = gate_overlay(board, m["road"], m["gates"])
+                over = over.resize(PUBLISH, Image.LANCZOS)
+                dst = os.path.join(OUT_IMG, f"{mid}.over.webp")
+                over.save(dst, "WEBP", quality=92, method=6)
+                print(f"  {mid} gates: {os.path.getsize(dst) / 1024:.0f} kB")
 
     body = [HEADER]
     for mid, m in data.items():
         body.append(f'  {mid}: {{\n    id: "{mid}",\n    image: "{mid}.webp",')
+        if m.get("gates"):
+            body.append(f'    overlay: "{mid}.over.webp",')
         body.append(wrap("road", extend_ends(m["road"])))
         body.append(wrap("plots", m["plots"]))
         body.append("  },")

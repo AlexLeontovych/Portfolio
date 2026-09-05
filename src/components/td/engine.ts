@@ -228,7 +228,7 @@ export class TdEngine {
 
   private creepSets: Partial<Record<string, AnimSet>> = {};
   private atlas: Atlas | null = null;
-  /** background paintings, kept by file name so a replay costs no download */
+  /** background paintings and gate layers, by file name, so a replay costs no download */
   private maps: Record<string, HTMLImageElement> = {};
   private decor: Decor[] = [];
 
@@ -270,10 +270,11 @@ export class TdEngine {
   async load() {
     const atlas = loadAtlas("./games/td");
     const maps = Promise.all(
-      [...new Set(LEVELS.map((l) => l.map).filter(Boolean))].map(async (id) => {
-        const file = MAPS[id as string].image;
-        return [file, await loadImage(`./games/td/maps/${file}`).catch(() => null)] as const;
-      }),
+      [...new Set(LEVELS.map((l) => l.map).filter(Boolean))].flatMap((id) => {
+        const m = MAPS[id as string];
+        return [m.image, m.overlay].filter((f): f is string => !!f);
+      }).map(async (file) =>
+        [file, await loadImage(`./games/td/maps/${file}`).catch(() => null)] as const),
     );
     const kinds = [...new Set(Object.values(CREEPS).map((c) => c.sheet))];
     const sets = await Promise.all(
@@ -942,6 +943,9 @@ export class TdEngine {
     this.drawTowers(ctx);
     this.drawCreeps(ctx);
     this.drawSoldiers(ctx);
+    // the gate facades go over whoever is walking through them
+    const gates = this.level.overlay ? this.maps[this.level.overlay] : undefined;
+    if (gates) ctx.drawImage(gates, 0, 0, BOARD.w, BOARD.h);
     this.drawShots(ctx);
     this.drawBlasts(ctx);
     this.drawPuffs(ctx);
