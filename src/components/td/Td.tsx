@@ -5,6 +5,7 @@ import { td, useTdOpen } from "../../lib/tdStore";
 import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 import { Close } from "../Icons";
 import { LEVELS } from "./levels";
+import { MAPS } from "./maps";
 import { TdEngine, type Hud, type Phase } from "./engine";
 import { DIFFICULTIES, TOWERS, type DifficultyId, type TowerId } from "./units";
 import styles from "./td.module.css";
@@ -152,7 +153,19 @@ export default function Td() {
 
       {/* ------------------------------ level select ----------------------------- */}
       {screen === "select" && (
-        <div className={styles.select}>
+        <div
+          className={styles.select}
+          style={
+            {
+              ...UI_VARS,
+              // the map behind the menu is the one about to be played, so the
+              // choice is made looking at the place rather than at a name
+              "--td-map": LEVELS[level].map
+                ? `url(./games/td/maps/${MAPS[LEVELS[level].map as string].image})`
+                : "none",
+            } as React.CSSProperties
+          }
+        >
           <p className={styles.kicker}>{t("plat.kicker")}</p>
           <h2 className={styles.title}>IRONWOOD KEEP</h2>
           <p className={styles.tagline}>{t("td.tagline")}</p>

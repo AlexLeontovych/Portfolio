@@ -21,6 +21,14 @@ export interface MapDef {
   plots: Point[];
   /** gate facades drawn OVER the creeps, so they come out from behind the arch */
   overlay?: string;
+  /**
+   * A second way across the map, complete from the same spawn as the road.
+   *
+   * Some maps are painted with two ways out. Sending part of every wave down
+   * the other one is what stops half a map being scenery: the plots along it
+   * are worth buying, and the player has two lines to hold instead of one.
+   */
+  branch?: Point[];
 }
 
 export const MAPS: Record<string, MapDef> = {
@@ -130,6 +138,27 @@ export const MAPS: Record<string, MapDef> = {
       { x: 828, y: 424 }, { x: 844, y: 434 }, { x: 858, y: 447 }, { x: 870, y: 461 },
       { x: 881, y: 476 }, { x: 893, y: 491 }, { x: 907, y: 503 }, { x: 922, y: 515 },
       { x: 935, y: 528 }, { x: 953, y: 535 }, { x: 1013, y: 595 },
+    ],
+    branch: [
+      { x: -17, y: -67 }, { x: 35, y: 17 }, { x: 46, y: 32 }, { x: 55, y: 48 },
+      { x: 64, y: 64 }, { x: 76, y: 79 }, { x: 91, y: 90 }, { x: 108, y: 97 },
+      { x: 126, y: 102 }, { x: 144, y: 106 }, { x: 162, y: 109 }, { x: 180, y: 113 },
+      { x: 198, y: 115 }, { x: 216, y: 117 }, { x: 234, y: 120 }, { x: 251, y: 127 },
+      { x: 267, y: 137 }, { x: 281, y: 148 }, { x: 288, y: 165 }, { x: 282, y: 182 },
+      { x: 271, y: 198 }, { x: 261, y: 213 }, { x: 257, y: 231 }, { x: 263, y: 249 },
+      { x: 279, y: 259 }, { x: 297, y: 264 }, { x: 314, y: 270 }, { x: 332, y: 275 },
+      { x: 349, y: 284 }, { x: 361, y: 299 }, { x: 375, y: 312 }, { x: 390, y: 322 },
+      { x: 404, y: 336 }, { x: 419, y: 346 }, { x: 435, y: 354 }, { x: 452, y: 363 },
+      { x: 469, y: 370 }, { x: 487, y: 376 }, { x: 505, y: 381 }, { x: 523, y: 386 },
+      { x: 541, y: 390 }, { x: 559, y: 394 }, { x: 577, y: 397 }, { x: 595, y: 401 },
+      { x: 613, y: 403 }, { x: 631, y: 406 }, { x: 649, y: 408 }, { x: 667, y: 409 },
+      { x: 685, y: 410 }, { x: 703, y: 411 }, { x: 721, y: 411 }, { x: 739, y: 411 },
+      { x: 757, y: 410 }, { x: 775, y: 411 }, { x: 793, y: 413 }, { x: 811, y: 417 },
+      { x: 828, y: 424 }, { x: 821, y: 407 }, { x: 824, y: 389 }, { x: 830, y: 372 },
+      { x: 839, y: 355 }, { x: 846, y: 338 }, { x: 851, y: 320 }, { x: 851, y: 302 },
+      { x: 850, y: 284 }, { x: 846, y: 266 }, { x: 841, y: 248 }, { x: 828, y: 234 },
+      { x: 814, y: 223 }, { x: 799, y: 212 }, { x: 786, y: 199 }, { x: 786, y: 181 },
+      { x: 799, y: 167 }, { x: 810, y: 152 }, { x: 820, y: 63 },
     ],
     plots: [
       { x: 182, y: 68 }, { x: 196, y: 156 }, { x: 370, y: 121 }, { x: 451, y: 198 },

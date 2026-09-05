@@ -57,6 +57,14 @@ export interface MapDef {
   plots: Point[];
   /** gate facades drawn OVER the creeps, so they come out from behind the arch */
   overlay?: string;
+  /**
+   * A second way across the map, complete from the same spawn as the road.
+   *
+   * Some maps are painted with two ways out. Sending part of every wave down
+   * the other one is what stops half a map being scenery: the plots along it
+   * are worth buying, and the player has two lines to hold instead of one.
+   */
+  branch?: Point[];
 }
 
 export const MAPS: Record<string, MapDef> = {
@@ -188,6 +196,8 @@ def main():
         if m.get("gates"):
             body.append(f'    overlay: "{mid}.over.webp",')
         body.append(wrap("road", extend_ends(m["road"])))
+        if m.get("branch"):
+            body.append(wrap("branch", extend_ends(m["branch"])))
         body.append(wrap("plots", m["plots"]))
         body.append("  },")
     body.append("};\n")

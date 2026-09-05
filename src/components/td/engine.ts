@@ -27,6 +27,8 @@ const MAX_CATCHUP = 0.25;
 const BETWEEN_WAVES = 12;
 /** Calling a wave early pays this much gold per remaining second. */
 const EARLY_BONUS = 2;
+/** One creep in this many takes the map's second road, where there is one. */
+const LANE_SHARE = 4;
 /** How long a tower spends playing its six firing frames. */
 const FIRE_TIME = 0.42;
 /** How long the eight-frame blast takes to burn out. */
@@ -89,6 +91,8 @@ export interface EngineHooks {
 interface Creep {
   id: CreepId;
   def: CreepDef;
+  /** which of the map's ways this one is walking */
+  lane: number;
   dist: number;
   hp: number;
   maxHp: number;
@@ -243,7 +247,7 @@ export class TdEngine {
   private maxLives = 0;
   private waveIdx = -1;
   private countdown = 0;
-  private spawning: { creep: CreepId; left: number; gap: number; t: number }[] = [];
+  private spawning: { creep: CreepId; left: number; gap: number; t: number; sent: number }[] = [];
   private selected: number | null = null;
 
   private view = { scale: 1, ox: 0, oy: 0 };
@@ -594,8 +598,9 @@ export class TdEngine {
     for (const s of this.spawning) {
       s.t -= dt;
       while (s.left > 0 && s.t <= 0) {
-        this.spawnCreep(s.creep);
+        this.spawnCreep(s.creep, this.laneFor(s.sent));
         s.left--;
+        s.sent++;
         s.t += s.gap;
       }
     }
@@ -616,7 +621,7 @@ export class TdEngine {
     this.waveIdx++;
     const wave = this.waves[this.waveIdx];
     this.spawning = wave.groups.map((g) => ({
-      creep: g.creep, left: g.count, gap: g.gap, t: g.delay ?? 0,
+      creep: g.creep, left: g.count, gap: g.gap, t: g.delay ?? 0, sent: 0,
     }));
     this.countdown = BETWEEN_WAVES;
     this.hooks.onToast({ kind: "wave", index: this.waveIdx + 1 });
@@ -624,12 +629,27 @@ export class TdEngine {
     this.emit();
   }
 
-  private spawnCreep(id: CreepId) {
+  /**
+   * Which way out this creep takes.
+   *
+   * Every fourth one goes down the map's other road, where the map has one.
+   * A trickle rather than half the wave: the point is that the far side of a
+   * map is worth defending at all, not that it needs a second army. A boss
+   * always walks the main road — it is the wave, and sending it round the
+   * back would be a shrug rather than a climax.
+   */
+  private laneFor(sent: number): number {
+    const lanes = this.level.paths.length;
+    if (lanes < 2) return 0;
+    return sent % LANE_SHARE === LANE_SHARE - 1 ? 1 : 0;
+  }
+
+  private spawnCreep(id: CreepId, lane = 0) {
     const def = CREEPS[id];
     const set = this.creepSets[def.sheet];
     const hp = def.hp * DIFFICULTIES[this.diff].hp * (this.level.def.hp ?? 1);
     this.creeps.push({
-      id, def, dist: -20 - Math.random() * 30,
+      id, def, lane: def.boss ? 0 : lane, dist: -20 - Math.random() * 30,
       hp, maxHp: hp,
       anim: set ? new Animator(set, "walk") : null,
       face: 1, blocker: null, swing: 0, dead: false, dying: 0, flash: 0,
@@ -639,8 +659,8 @@ export class TdEngine {
   /* --------------------------------- creeps -------------------------------- */
 
   private updateCreeps(dt: number) {
-    const path = this.level.path;
     for (const c of this.creeps) {
+      const path = this.level.paths[c.lane] ?? this.level.path;
       c.anim?.update(dt);
       c.flash = Math.max(0, c.flash - dt);
       if (c.dead) {
@@ -702,7 +722,7 @@ export class TdEngine {
   }
 
   private creepPos(c: Creep): Point {
-    return pointAt(this.level.path, Math.max(0, c.dist));
+    return pointAt(this.level.paths[c.lane] ?? this.level.path, Math.max(0, c.dist));
   }
 
   /* --------------------------------- towers -------------------------------- */

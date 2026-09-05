@@ -66,7 +66,10 @@ export interface LevelDef {
 
 export interface Level {
   def: LevelDef;
+  /** the main road; `paths[0]` is the same object */
   path: Path;
+  /** every way across this map, the road first */
+  paths: Path[];
   slots: Point[];
   /** background to draw under everything, or null to draw the board by hand */
   image: string | null;
@@ -249,9 +252,12 @@ export function loadLevel(idx: number): Level {
   const def = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, idx))];
   const map = def.map ? MAPS[def.map] : undefined;
   const path = buildPath(map ? map.road : def.road);
+  const paths = [path];
+  if (map?.branch) paths.push(buildPath(map.branch));
   return {
     def,
     path,
+    paths,
     slots: map ? map.plots : deriveSlots(path),
     image: map ? map.image : null,
     overlay: map?.overlay ?? null,
