@@ -180,12 +180,26 @@ def base_centre(alpha, half=None):
     if not mids:
         return None
     if half is None:
-        lower = range(max(top, bottom - int((bottom - top) * 0.45)), bottom + 1)
-        width = {y: int(np.ptp(np.nonzero(alpha[y] > ALPHA)[0])) for y in lower
-                 if (alpha[y] > ALPHA).any()}
-        widest = max(width.values())
-        equator = np.mean([y for y, w in width.items() if w >= widest * 0.96])
-        half = float(bottom - equator)
+        # Walk up from the bottom edge: the base disc widens to its equator
+        # and narrows again. The FIRST peak is the equator. A drum that
+        # flares at the top, or pillars that stick out above it, make a
+        # second, higher peak — and taking the widest row outright picked
+        # that one on the tier-3 mage, which set its anchor a third of a
+        # base too high and sat the tower on its pad's front ring.
+        span = max(6, int((bottom - top) * 0.45))
+        w = []
+        for k in range(span + 1):
+            y = bottom - k
+            xs = np.nonzero(alpha[y] > ALPHA)[0]
+            w.append(int(np.ptp(xs)) if xs.size else 0)
+        w = [int(np.median(w[max(0, k - 1):k + 2])) for k in range(len(w))]
+        peak, at = w[0], 0
+        for k in range(1, len(w)):
+            if w[k] > peak:
+                peak, at = w[k], k
+            elif w[k] < peak * 0.94 and at > 0:
+                break                                   # past the equator
+        half = float(at)
     return float(np.median(mids)), float(bottom - half), half
 
 
