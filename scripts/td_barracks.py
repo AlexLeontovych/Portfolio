@@ -68,6 +68,11 @@ PHASES = (0, 1, 2)
 LIMB = 4
 #: the furthest a frame may be moved to lay it over its reference
 SLIDE = 90
+#: a loose piece this big is somebody's helmet, not a speck of antialiasing
+STRAY = 60
+#: and it has to be this clear of the drawing before it is somebody ELSE's —
+#: a sword tip cut off from its own hand by a soft edge is a pixel or two away
+GAP = 8
 
 
 def bands(mask, n, pitch, slack=SLACK):
@@ -372,6 +377,48 @@ def outsiders(grid, cell):
     return out & grey
 
 
+def neighbours(grid, cell):
+    """
+    Whatever of the drawing next door was cut into this cell with it.
+
+    The pack's rows overlap: a soldier's helmet reaches up into the cell above
+    him and his boots down into the one below, so there is no empty line to cut
+    along and the seam goes through both of them. What lands in the wrong cell
+    is a piece of the neighbour, and it gives itself away by where it is —
+    clear of the drawing altogether, above its head or below its feet, with a
+    gap between them that no part of one man leaves.
+
+    It matters more than it looks. A helmet crown left lying under a soldier's
+    boots is the lowest thing in his cell, so it is taken for the ground he
+    stands on, and he is hung the height of a helmet above the road.
+    """
+    solid = grid[:, :, 3] > SOLID
+    out = np.zeros_like(solid)
+    h, w = solid.shape
+    for cy in range(0, h - cell + 1, cell):
+        for cx in range(0, w - cell + 1, cell):
+            box = solid[cy:cy + cell, cx:cx + cell]
+            if not box.any():
+                continue
+            parts, left = [], box.copy()
+            while left.any():
+                ys, xs = np.nonzero(left)
+                seed = np.zeros_like(left)
+                seed[ys[0], xs[0]] = True
+                blob = co._reconstruct(seed, left, 1)
+                left &= ~blob
+                parts.append(blob)
+            parts.sort(key=lambda b: -b.sum())
+            span = np.nonzero(parts[0].any(axis=1))[0]
+            for blob in parts[1:]:
+                if blob.sum() < STRAY:
+                    continue
+                rows = np.nonzero(blob.any(axis=1))[0]
+                if rows[0] > span[-1] + GAP or rows[-1] < span[0] - GAP:
+                    out[cy:cy + cell, cx:cx + cell] |= blob
+    return out
+
+
 def stand_up(grid, cell, ground, chain=False, ref=None):
     """
     Put every drawing where it belongs in its cell, judged on what is left.
@@ -441,6 +488,10 @@ def finish(grid, cell, ground, stripped, chain=False, ref=None):
     if stripped:
         grid, litter, mended = clean(grid, cell)
         note = f", {litter} px of backdrop swept up and {mended} mended"
+    strays = co._dilate(neighbours(grid, cell), 2)
+    if strays.any():
+        grid[:, :, 3] *= ~strays
+        note += f", {int(strays.sum())} px of the drawing next door sent back"
     grid, moved, firsts = stand_up(grid, cell, ground, chain, ref)
     return grid, note + f", laid over one another by up to {moved}px", firsts
 

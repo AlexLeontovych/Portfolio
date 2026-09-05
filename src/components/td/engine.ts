@@ -1499,6 +1499,17 @@ export class TdEngine {
           s.action === "attack" ? Math.min(5, Math.floor((1 - s.swing / SWING_TIME) * 6)) :
           s.action === "death" ? Math.min(5, Math.floor((s.t / FALL_TIME) * 6)) :
           Math.floor((s.t / (s.action === "walk" ? STEP_TIME : BREATH_TIME)) * 6) % 6;
+        if (!s.dead) {
+          // the same contact shadow the towers get: the anchor is his feet,
+          // so an ellipse on it is what puts him ON the road rather than
+          // over it. The pack drew none, and without one he reads as flying
+          ctx.save();
+          ctx.fillStyle = "rgba(0,0,0,0.26)";
+          ctx.beginPath();
+          ctx.ellipse(s.x, s.y - 1, 8, 3.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
         if (drawSprite(ctx, this.atlas, `s.${squad}.${s.action}.${face}`, s.x, s.y, {
           frame, alpha: s.dead ? 0.85 : 1,
         })) {
