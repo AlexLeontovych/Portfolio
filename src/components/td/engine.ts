@@ -62,6 +62,16 @@ const MUSTER_TIME = 9;
 const GRAB = 34;
 /** And how near the two of them stand while they fight. */
 const REACH = 13;
+/**
+ * The slack on that, and on a post: how near counts as arrived.
+ *
+ * A soldier's step is capped at exactly the distance left, so he lands ON the
+ * number he was walking to and floating point leaves him a hair beyond it.
+ * Asking whether he still has further to go then answers yes for ever: he
+ * walked on the spot, a hand's breadth from his enemy, never drew his sword,
+ * and was killed without once hitting back.
+ */
+const ARRIVED = 0.5;
 /** Seconds the door takes to swing open or shut. */
 const GATE_TIME = 0.4;
 
@@ -911,7 +921,7 @@ export class TdEngine {
       const dx = to.x - s.x;
       const dy = to.y - s.y;
       const gap = Math.hypot(dx, dy);
-      if (gap > near) {
+      if (gap > near + ARRIVED) {
         const step = Math.min(MARCH * dt, gap - near);
         s.x += (dx / gap) * step;
         s.y += (dy / gap) * step;
