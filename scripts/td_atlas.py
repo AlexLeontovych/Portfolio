@@ -5,7 +5,7 @@ Build the tower-defense sprite atlas.
 The game draws everything from one texture. This script cuts the frames it
 needs out of the source sheets, trims the transparent margin off them, scales
 each down to the size it is drawn at, and bakes the result into
-public/games/td/atlas.webp plus an index in atlas.json.
+public/games/td/atlas.<hash>.webp plus an index in atlas.json that names it.
 
 Two kinds of source:
 
@@ -31,6 +31,9 @@ when it upgrades to art with a different outline.
 Usage:
     python scripts/td_atlas.py [path to extracted packs]
 """
+import glob
+import hashlib
+import io
 import json
 import os
 import sys
@@ -338,11 +341,23 @@ def main():
     # are three times smaller for no visible loss, but lossy ringing around a
     # hard 1px edge is exactly what pixel art is made of.
     pixel = any(c["name"].split(".")[0] not in AI_ONLY for c in cut)
-    out = os.path.join(OUT_DIR, "atlas.webp")
     os.makedirs(OUT_DIR, exist_ok=True)
-    atlas.save(out, "WEBP", method=6, lossless=pixel, quality=84)
+    # The image is named after its own contents and the index names it. A
+    # browser holding yesterday's atlas.webp against today's atlas.json would
+    # otherwise cut every frame from the wrong place — and it did, once: the
+    # index is small and refetched, the image is large and cached.
+    buf = io.BytesIO()
+    atlas.save(buf, "WEBP", method=6, lossless=pixel, quality=84)
+    data = buf.getvalue()
+    stamp = hashlib.sha1(data).hexdigest()[:10]
+    for old_file in glob.glob(os.path.join(OUT_DIR, "atlas*.webp")):
+        os.remove(old_file)
+    image = f"atlas.{stamp}.webp"
+    out = os.path.join(OUT_DIR, image)
+    with open(out, "wb") as f:
+        f.write(data)
     with open(os.path.join(OUT_DIR, "atlas.json"), "w", encoding="utf-8") as f:
-        json.dump(index, f, indent=1, sort_keys=True)
+        json.dump({"image": image, "frames": index}, f, indent=1, sort_keys=True)
 
     kb = os.path.getsize(out) / 1024
     print(f"\n{len(cut)} sprites -> atlas {width}x{height}, {kb:.0f} kB")

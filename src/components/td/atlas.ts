@@ -2,7 +2,7 @@
  * The one texture this game draws its towers, shots and blasts from.
  *
  * scripts/td_atlas.py cuts the frames out of art-src/td, trims the empty
- * margin, scales each to the size it is drawn at and writes atlas.webp plus
+ * margin, scales each to the size it is drawn at and writes atlas.<hash>.webp plus
  * the index below. Everything is therefore already the right size on the
  * 960x540 board: drawing is a blit, never a resample.
  *
@@ -36,11 +36,14 @@ export type Atlas = {
 
 export async function loadAtlas(base: string): Promise<Atlas | null> {
   try {
-    const [img, frames] = await Promise.all([
-      loadImage(`${base}/atlas.webp`),
-      fetch(`${base}/atlas.json`).then((r) => r.json() as Promise<Record<string, AtlasEntry>>),
-    ]);
-    return { img, frames };
+    // The index is always fetched fresh and names the image it was built
+    // with — the image carries a content hash in its name, so a cached copy
+    // can never be paired with a newer index and cut frames from the wrong
+    // place.
+    const index = await fetch(`${base}/atlas.json`, { cache: "no-cache" })
+      .then((r) => r.json() as Promise<{ image: string; frames: Record<string, AtlasEntry> }>);
+    const img = await loadImage(`${base}/${index.image}`);
+    return { img, frames: index.frames };
   } catch {
     // A missing atlas must not take the level down with it — the engine keeps
     // its drawn fallbacks for exactly this.
