@@ -24,6 +24,15 @@ Licence: free for commercial and non-commercial use.
 Used in: the tileset, props and parallax backdrops (`public/games/platformer/forest/`). The cave
 and arena biomes reuse the same sheets, recoloured at runtime.
 
+## Painted art — IRONWOOD KEEP tower defense
+
+The four tower sheets, the projectiles and the blast (`art-src/td/*.webp`) were generated for this
+project by its author. `scripts/td_atlas.py` cuts, trims and scales them into the single texture
+the game draws from (`public/games/td/atlas.webp`); the full-size sheets stay in `art-src/` and are
+never served.
+
+The creeps are the same LuizMelo sheets the platformer uses, credited above.
+
 ## UI
 
 The platformer's interface skin (`public/games/platformer/ui/`) is generated for this project —

@@ -17,9 +17,9 @@ import styles from "./td.module.css";
  * HUD, the build and upgrade menus, and the end cards.
  */
 
-const TOWER_ORDER: TowerId[] = ["archer", "barracks", "mage", "bombard"];
+const TOWER_ORDER: TowerId[] = ["archer", "barracks", "mage", "gatling", "bombard"];
 const TOWER_GLYPH: Record<TowerId, string> = {
-  archer: "🏹", barracks: "🛡", mage: "✦", bombard: "☄",
+  archer: "🏹", barracks: "🛡", mage: "✦", gatling: "⁙", bombard: "☄",
 };
 
 export default function Td() {

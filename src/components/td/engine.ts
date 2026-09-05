@@ -12,6 +12,7 @@
  */
 
 import { Animator, loadAnimSet, type AnimSet } from "../platformer/sprites";
+import { drawSprite, loadAtlas, type Atlas } from "./atlas";
 import { BOARD, LEVELS, loadLevel, waveSize, type Level } from "./levels";
 import { distanceToPath, headingAt, pointAt, type Point } from "./path";
 import {
@@ -25,6 +26,17 @@ const MAX_CATCHUP = 0.25;
 const BETWEEN_WAVES = 12;
 /** Calling a wave early pays this much gold per remaining second. */
 const EARLY_BONUS = 2;
+/** How long a tower spends playing its six firing frames. */
+const FIRE_TIME = 0.42;
+/** How long the eight-frame blast takes to burn out. */
+const BLAST_TIME = 0.62;
+
+/** Which painted projectile each weapon throws. */
+const SHOT_ART: Record<"arrow" | "bolt" | "shell" | "rocket", string> = {
+  arrow: "p.arrow", bolt: "p.bolt", shell: "p.bomb", rocket: "p.rocket",
+};
+/** The projectiles were all painted flying down-right, at 45 degrees. */
+const SHOT_TILT = Math.PI / 4;
 
 export type Phase = "loading" | "playing" | "paused" | "won" | "lost";
 
@@ -106,6 +118,8 @@ interface Tower {
   tier: number;
   cooldown: number;
   angle: number;
+  /** seconds into the six-frame firing animation, negative when idle */
+  fire: number;
   soldiers: Soldier[];
   /** barracks only: distance along the road the men hold */
   rally: number;
@@ -121,7 +135,7 @@ interface Shot {
   speed: number;
   damage: number;
   kind: "physical" | "magic";
-  art: "arrow" | "bolt" | "shell";
+  art: "arrow" | "bolt" | "shell" | "rocket";
   splash: number;
   angle: number;
   life: number;
@@ -136,6 +150,14 @@ interface Puff {
   max: number;
   r: number;
   colour: string;
+}
+
+/** One playthrough of the blast sheet, left where a shell landed. */
+interface Blast {
+  x: number;
+  y: number;
+  t: number;
+  scale: number;
 }
 
 interface Decor {
@@ -198,12 +220,14 @@ export class TdEngine {
   private diff: DifficultyId = "normal";
 
   private creepSets: Partial<Record<string, AnimSet>> = {};
+  private atlas: Atlas | null = null;
   private decor: Decor[] = [];
 
   private creeps: Creep[] = [];
   private towers: Tower[] = [];
   private shots: Shot[] = [];
   private puffs: Puff[] = [];
+  private blasts: Blast[] = [];
 
   private gold = 0;
   private lives = 0;
@@ -235,6 +259,7 @@ export class TdEngine {
   /* ------------------------------- lifecycle ------------------------------- */
 
   async load() {
+    const atlas = loadAtlas("./games/td");
     const kinds = [...new Set(Object.values(CREEPS).map((c) => c.sheet))];
     const sets = await Promise.all(
       kinds.map((sheet) =>
@@ -245,6 +270,7 @@ export class TdEngine {
         }).catch(() => null),
       ),
     );
+    this.atlas = await atlas;
     if (this.destroyed) return;
     kinds.forEach((k, i) => {
       if (sets[i]) this.creepSets[k] = sets[i] as AnimSet;
@@ -267,6 +293,7 @@ export class TdEngine {
     this.towers = [];
     this.shots = [];
     this.puffs = [];
+    this.blasts = [];
     this.spawning = [];
     this.selected = null;
     this.gold = d.gold;
@@ -443,7 +470,7 @@ export class TdEngine {
     this.gold -= cost;
     const tower: Tower = {
       slot: this.selected, x: slot.x, y: slot.y, id, tier: 0,
-      cooldown: 0, angle: 0, soldiers: [], rally: 0, spent: cost,
+      cooldown: 0, angle: 0, fire: -1, soldiers: [], rally: 0, spent: cost,
     };
     if (TOWERS[id].blocks) this.assignRally(tower);
     this.towers.push(tower);
@@ -532,6 +559,7 @@ export class TdEngine {
     this.updateCreeps(dt);
     this.updateTowers(dt);
     this.updateShots(dt);
+    this.updateBlasts(dt);
     this.updatePuffs(dt);
     if ((this.frame = (this.frame + 1) % 10) === 0) this.emit();
   }
@@ -672,6 +700,8 @@ export class TdEngine {
 
       // clamp: an idle tower used to run its cooldown off to minus infinity
       t.cooldown = Math.max(0, t.cooldown - dt);
+      // ... and the firing animation runs once, then parks on the idle frame
+      if (t.fire >= 0) t.fire = t.fire + dt > FIRE_TIME ? -1 : t.fire + dt;
       if (t.cooldown > 0) continue;
 
       // furthest along the road first: the closest to leaking is the threat
@@ -688,8 +718,9 @@ export class TdEngine {
       const p = this.creepPos(target);
       t.angle = Math.atan2(p.y - t.y, p.x - t.x);
       t.cooldown = tier.reload;
+      t.fire = 0;
       this.shots.push({
-        x: t.x, y: t.y - 14, target, tx: p.x, ty: p.y,
+        x: t.x, y: t.y - 22, target, tx: p.x, ty: p.y,
         speed: def.projectile === "shell" ? 260 : 460,
         damage: tier.damage, kind: def.kind, art: def.projectile as Shot["art"],
         splash: tier.splash ?? 0, angle: t.angle, life: 3,
@@ -778,7 +809,8 @@ export class TdEngine {
         const p = this.creepPos(c);
         if (Math.hypot(p.x - s.tx, p.y - s.ty) <= s.splash) this.hurtCreep(c, s.damage, s.kind);
       }
-      this.puff(s.tx, s.ty, 14, "#ffb347");
+      this.blasts.push({ x: s.tx, y: s.ty, t: 0, scale: Math.max(0.5, s.splash / 46) });
+      this.puff(s.tx, s.ty, 10, "#ffb347");
     } else if (s.target && !s.target.dead) {
       this.hurtCreep(s.target, s.damage, s.kind);
       this.puff(s.tx, s.ty, 4, s.kind === "magic" ? "#b678ff" : "#ffe9a8");
@@ -797,6 +829,11 @@ export class TdEngine {
         life, max: life, r: 1.5 + Math.random() * 2.5, colour,
       });
     }
+  }
+
+  private updateBlasts(dt: number) {
+    for (const b of this.blasts) b.t += dt;
+    this.blasts = this.blasts.filter((b) => b.t < BLAST_TIME);
   }
 
   private updatePuffs(dt: number) {
@@ -883,6 +920,7 @@ export class TdEngine {
     this.drawCreeps(ctx);
     this.drawSoldiers(ctx);
     this.drawShots(ctx);
+    this.drawBlasts(ctx);
     this.drawPuffs(ctx);
   }
 
@@ -1031,14 +1069,41 @@ export class TdEngine {
   }
 
   /**
-   * Towers are drawn, not sprited: four silhouettes that read instantly at a
-   * glance and simply grow with each tier, which is what a player needs from
-   * a board this busy.
+   * A tower is one painted sheet of six frames: frame 0 is it standing there,
+   * 1 to 5 are the shot. `t.fire` runs the strip once per volley and then
+   * parks back on 0, so the board animates without the engine tracking any
+   * animation state of its own.
+   *
+   * Tiers do not have their own art, so they read as a modest size step plus
+   * the pips under the base — enough to tell three archer towers apart at a
+   * glance without three times the art.
+   *
+   * The hand-drawn silhouettes below are still the fallback: they are what
+   * the barracks uses, and what everything falls back to if the atlas fails
+   * to load.
    */
   private drawTowers(ctx: CanvasRenderingContext2D) {
     for (const t of this.towers) {
       const sel = this.selected === t.slot;
       const tier = t.tier;
+      const art = TOWERS[t.id].art;
+
+      if (art) {
+        const scale = 1 + tier * 0.09;
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.beginPath();
+        ctx.ellipse(t.x, t.y + 8, 26 * scale, 10 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        const frame = t.fire < 0 ? 0 : 1 + Math.floor((t.fire / FIRE_TIME) * 5);
+        if (drawSprite(ctx, this.atlas, art, t.x, t.y + 10, { frame, scale })) {
+          this.drawTierPips(ctx, t.x, t.y + 14, tier);
+          if (sel) this.drawRange(ctx, t);
+          continue;
+        }
+      }
+
       const s = 1 + tier * 0.16;
       ctx.save();
       ctx.translate(t.x, t.y);
@@ -1116,25 +1181,28 @@ export class TdEngine {
         ctx.restore();
       }
 
-      // tier pips
-      ctx.fillStyle = "#ffd45e";
-      for (let i = 0; i <= tier; i++) ctx.fillRect(-8 + i * 7, 16, 5, 3);
       ctx.restore();
-
-      if (sel) {
-        const range = TOWERS[t.id].tiers[t.tier].range;
-        ctx.save();
-        ctx.strokeStyle = "rgba(255,255,255,0.5)";
-        ctx.fillStyle = "rgba(255,255,255,0.07)";
-        ctx.lineWidth = 2;
-        ctx.setLineDash([7, 6]);
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, range, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
+      this.drawTierPips(ctx, t.x, t.y + 16 * s, tier);
+      if (sel) this.drawRange(ctx, t);
     }
+  }
+
+  private drawTierPips(ctx: CanvasRenderingContext2D, x: number, y: number, tier: number) {
+    ctx.fillStyle = "#ffd45e";
+    for (let i = 0; i <= tier; i++) ctx.fillRect(x - 8 + i * 7, y, 5, 3);
+  }
+
+  private drawRange(ctx: CanvasRenderingContext2D, t: Tower) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.fillStyle = "rgba(255,255,255,0.07)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 6]);
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, TOWERS[t.id].tiers[t.tier].range, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
   }
 
   private drawCreeps(ctx: CanvasRenderingContext2D) {
@@ -1198,6 +1266,12 @@ export class TdEngine {
 
   private drawShots(ctx: CanvasRenderingContext2D) {
     for (const s of this.shots) {
+      // The painted projectiles are drawn pointing down-right, so the sprite
+      // is turned back to level before the shot's own heading is applied.
+      if (drawSprite(ctx, this.atlas, SHOT_ART[s.art], s.x, s.y, {
+        angle: s.angle - SHOT_TILT, centred: true,
+      })) continue;
+
       ctx.save();
       ctx.translate(s.x, s.y);
       ctx.rotate(s.angle);
@@ -1219,6 +1293,21 @@ export class TdEngine {
         ctx.fill();
       }
       ctx.restore();
+    }
+  }
+
+  private drawBlasts(ctx: CanvasRenderingContext2D) {
+    for (const b of this.blasts) {
+      const frame = Math.floor((b.t / BLAST_TIME) * 8);
+      if (drawSprite(ctx, this.atlas, "fx.blast", b.x, b.y + 6, {
+        frame, scale: b.scale,
+      })) continue;
+      ctx.globalAlpha = Math.max(0, 1 - b.t / BLAST_TIME);
+      ctx.fillStyle = "#ffb347";
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 10 + b.t * 60, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
   }
 

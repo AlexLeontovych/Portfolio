@@ -164,7 +164,7 @@ export const dict = {
       controls_touch: "Left pad — move and duck · ⤒ — jump · » — dash · ⚔ ✹ ✦ — attacks · ▼ + ⚔ in the air — down-thrust",
     },
     td: {
-      tagline: "Five maps, four towers, three ways to have a bad time. Hold the road.",
+      tagline: "Five maps, five towers, three ways to have a bad time. Hold the road.",
       start: "MARCH",
       exit: "Back to site",
       levels: "Maps",
@@ -190,10 +190,12 @@ export const dict = {
       tower_mage: "Mages",
       tower_barracks: "Barracks",
       tower_bombard: "Bombard",
+      tower_gatling: "Battery",
       tower_archer_blurb: "Cheap and quick, hits anything. Armour blunts it.",
       tower_mage_blurb: "Slow and dear, but armour means nothing to it.",
       tower_barracks_blurb: "Sends men to hold the road. Nothing else stops a creep walking.",
       tower_bombard_blurb: "Lobs shells into a crowd. Cannot touch anything airborne.",
+      tower_gatling_blurb: "Fires far faster than it hits hard. Give it a long stretch of road.",
       controls: "Click a plot to build · Space — call the wave early · F — double speed · Esc — pause",
     },
     pet: {
@@ -206,7 +208,7 @@ export const dict = {
       neon_desc: "Pseudo-3D endless racer in the OutRun style. Segmented road, baked sprites, a 3D garage on three.js, tilt steering, rewind, cockpit view.",
       plat_name: "EMBERWOOD",
       td_name: "IRONWOOD KEEP",
-      td_desc: "Tower defense: five maps, four towers with three tiers each, eight creeps and three difficulties. Build plots are derived from the road, so no tower can ever sit where enemies walk.",
+      td_desc: "Tower defense: five maps, five towers with three tiers each, eight creeps and three difficulties. Build plots are derived from the road, so no tower can ever sit where enemies walk.",
       plat_desc: "Pixel-art action platformer: five levels, two heroes with different move sets, four enemy types and a three-phase boss. Fixed-step physics, synthesised sound.",
     },
     finish: {
@@ -443,7 +445,7 @@ export const dict = {
       controls_touch: "Слева — движение и вниз · ⤒ — прыжок · » — рывок · ⚔ ✹ ✦ — удары · ▼ + ⚔ в воздухе — удар вниз",
     },
     td: {
-      tagline: "Пять карт, четыре башни, три способа огрести. Держи дорогу.",
+      tagline: "Пять карт, пять башен, три способа огрести. Держи дорогу.",
       start: "В БОЙ",
       exit: "На сайт",
       levels: "Карты",
@@ -469,10 +471,12 @@ export const dict = {
       tower_mage: "Маги",
       tower_barracks: "Казармы",
       tower_bombard: "Бомбарда",
+      tower_gatling: "Батарея",
       tower_archer_blurb: "Дёшево и часто, бьёт по всем. Броня гасит урон.",
       tower_mage_blurb: "Медленно и дорого, зато броня для неё пустой звук.",
       tower_barracks_blurb: "Выставляет бойцов на дорогу. Больше никто крипа не остановит.",
       tower_bombard_blurb: "Кидает снаряды по толпе. По воздуху не достаёт.",
+      tower_gatling_blurb: "Бьёт куда чаще, чем сильно. Ставь на длинный отрезок дороги.",
       controls: "Клик по площадке — строить · Пробел — позвать волну · F — двойная скорость · Esc — пауза",
     },
     pet: {
@@ -485,7 +489,7 @@ export const dict = {
       neon_desc: "Псевдо-3D бесконечная гонка в стиле OutRun. Сегментная дорога, запечённые спрайты, 3D-гараж на three.js, управление наклоном телефона, перемотка, вид из кабины.",
       plat_name: "EMBERWOOD",
       td_name: "IRONWOOD KEEP",
-      td_desc: "Tower defense: пять карт, четыре башни по три уровня, восемь врагов и три сложности. Площадки под башни выводятся из дороги, поэтому башня физически не может встать туда, где идут враги.",
+      td_desc: "Tower defense: пять карт, пять башен по три уровня, восемь врагов и три сложности. Площадки под башни выводятся из дороги, поэтому башня физически не может встать туда, где идут враги.",
       plat_desc: "Пиксельный экшен-платформер: пять уровней, два героя с разными приёмами, четыре типа врагов и босс на три фазы. Физика с фиксированным шагом, синтезированный звук.",
     },
     finish: {
@@ -722,7 +726,7 @@ export const dict = {
       controls_touch: "Ліворуч — рух і вниз · ⤒ — стрибок · » — ривок · ⚔ ✹ ✦ — удари · ▼ + ⚔ у повітрі — удар вниз",
     },
     td: {
-      tagline: "П'ять карт, чотири вежі, три способи отримати. Тримай дорогу.",
+      tagline: "П'ять карт, п'ять веж, три способи отримати. Тримай дорогу.",
       start: "У БІЙ",
       exit: "На сайт",
       levels: "Карти",
@@ -748,10 +752,12 @@ export const dict = {
       tower_mage: "Маги",
       tower_barracks: "Казарми",
       tower_bombard: "Бомбарда",
+      tower_gatling: "Батарея",
       tower_archer_blurb: "Дешево й часто, б'є по всіх. Броня гасить шкоду.",
       tower_mage_blurb: "Повільно й дорого, зате броня для неї порожній звук.",
       tower_barracks_blurb: "Виставляє бійців на дорогу. Більше ніхто крипа не спинить.",
       tower_bombard_blurb: "Кидає снаряди по натовпу. По повітрю не дістає.",
+      tower_gatling_blurb: "Б'є куди частіше, ніж сильніше. Став на довгий відрізок дороги.",
       controls: "Клік по майданчику — будувати · Пробіл — покликати хвилю · F — подвійна швидкість · Esc — пауза",
     },
     pet: {
@@ -764,7 +770,7 @@ export const dict = {
       neon_desc: "Псевдо-3D нескінченна гонка у стилі OutRun. Сегментна дорога, запечені спрайти, 3D-гараж на three.js, керування нахилом телефона, перемотка, вид із кабіни.",
       plat_name: "EMBERWOOD",
       td_name: "IRONWOOD KEEP",
-      td_desc: "Tower defense: п'ять карт, чотири вежі по три рівні, вісім ворогів і три складності. Майданчики під вежі виводяться з дороги, тож вежа фізично не стане там, де йдуть вороги.",
+      td_desc: "Tower defense: п'ять карт, п'ять веж по три рівні, вісім ворогів і три складності. Майданчики під вежі виводяться з дороги, тож вежа фізично не стане там, де йдуть вороги.",
       plat_desc: "Піксельний екшен-платформер: п'ять рівнів, два герої з різними прийомами, чотири типи ворогів і бос на три фази. Фізика з фіксованим кроком, синтезований звук.",
     },
     finish: {

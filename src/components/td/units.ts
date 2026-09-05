@@ -78,7 +78,7 @@ export const CREEPS: Record<CreepId, CreepDef> = {
 
 /* --------------------------------- towers --------------------------------- */
 
-export type TowerId = "archer" | "mage" | "barracks" | "bombard";
+export type TowerId = "archer" | "mage" | "barracks" | "bombard" | "gatling";
 export type DamageKind = "physical" | "magic";
 
 export interface TowerTier {
@@ -103,7 +103,9 @@ export interface TowerDef {
   hitsAir: boolean;
   /** barracks place men on the road instead of shooting */
   blocks: boolean;
-  projectile: "arrow" | "bolt" | "shell" | "none";
+  projectile: "arrow" | "bolt" | "shell" | "rocket" | "none";
+  /** sprite in the atlas; the barracks has none yet and is drawn by hand */
+  art?: "t.crossbow" | "t.mage" | "t.cannon" | "t.gatling";
   tiers: [TowerTier, TowerTier, TowerTier];
 }
 
@@ -112,6 +114,7 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     name: "Archer Tower",
     blurb: "Cheap, quick, hits anything. Armour blunts it.",
     kind: "physical", hitsAir: true, blocks: false, projectile: "arrow",
+    art: "t.crossbow",
     tiers: [
       { cost: 70, damage: 9, reload: 0.75, range: 150 },
       { cost: 90, damage: 15, reload: 0.62, range: 172 },
@@ -122,6 +125,7 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     name: "Mage Tower",
     blurb: "Slow and expensive, but armour means nothing to it.",
     kind: "magic", hitsAir: true, blocks: false, projectile: "bolt",
+    art: "t.mage",
     tiers: [
       { cost: 100, damage: 26, reload: 1.5, range: 140 },
       { cost: 130, damage: 44, reload: 1.35, range: 158 },
@@ -142,10 +146,22 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     name: "Bombard",
     blurb: "Lobs shells into a crowd. Cannot touch anything airborne.",
     kind: "physical", hitsAir: false, blocks: false, projectile: "shell",
+    art: "t.cannon",
     tiers: [
       { cost: 120, damage: 30, reload: 2.2, range: 165, splash: 46 },
       { cost: 150, damage: 52, reload: 2.0, range: 182, splash: 54 },
       { cost: 220, damage: 88, reload: 1.8, range: 205, splash: 64 },
+    ],
+  },
+  gatling: {
+    name: "Gun Battery",
+    blurb: "Fires far faster than it hits hard. Give it a long stretch of road.",
+    kind: "physical", hitsAir: true, blocks: false, projectile: "rocket",
+    art: "t.gatling",
+    tiers: [
+      { cost: 95, damage: 6, reload: 0.3, range: 128 },
+      { cost: 125, damage: 10, reload: 0.26, range: 142 },
+      { cost: 185, damage: 16, reload: 0.22, range: 158 },
     ],
   },
 };
