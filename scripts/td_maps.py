@@ -66,7 +66,8 @@ export const MAPS: Record<string, MapDef> = {
 #: how far past the edge the road runs, so creeps walk on and off rather than
 #: appearing and vanishing at the border
 OVERRUN = 80
-#: half the width of the road, in board px: the strip creeps actually walk on
+#: half the width of the road, in board px: the strip creeps actually walk on.
+#: A gate may override it — a paved ramp is wider than a doorway.
 BAND = 14
 
 
@@ -115,7 +116,8 @@ def gate_overlay(board, road, gates):
         x0, y0, x1, y1 = g["box"]
         keep = np.zeros((h, w), dtype=bool)
         keep[y0:y1, x0:x1] = True
-        keep &= ~band
+        keep &= ~(band if g.get("band", BAND) == BAND
+                  else road_band((h, w), road, g["band"]))
         if "opening" in g:
             ox0, oy0, ox1, oy1 = g["opening"]
             keep[oy0:oy1, ox0:ox1] = False
