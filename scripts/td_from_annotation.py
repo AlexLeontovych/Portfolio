@@ -11,7 +11,9 @@ on both, and this script takes it literally:
     from its left end to its right end — the same centreline router the
     tracer uses, now on a band the author drew rather than one guessed from
     the sand's colour;
-  * each green ring becomes the centre of the ring.
+  * each green ring becomes the centre of the ellipse fitted through it —
+    fitted, not averaged, so a ring half-hidden under a tower still yields
+    its true centre.
 
 Both are scaled into board space and written into art-src/td/maps.json for
 the map named, replacing whatever was traced before. An overlay of the
@@ -78,17 +80,73 @@ def biggest(mask):
     return best
 
 
+def ellipse_centre(xs, ys):
+    """
+    Centre of the ellipse the pixels lie on, by least squares.
+
+    The pads are drawn in perspective, so a ring is an ellipse, and part of
+    it may be hidden under a tower the author happened to have built there.
+    The centroid of the visible pixels then slides towards the visible side;
+    the ellipse through them does not. A general conic is fitted and its
+    centre taken; if the fit is not an ellipse the centroid is used after all.
+    """
+    x = xs - xs.mean()
+    y = ys - ys.mean()
+    D = np.column_stack([x * x, x * y, y * y, x, y, np.ones_like(x)])
+    # smallest singular vector of the design matrix is the conic
+    _, _, vt = np.linalg.svd(D, full_matrices=False)
+    A, B, C, Dd, E, _ = vt[-1]
+    det = 4 * A * C - B * B
+    if det <= 1e-9:
+        return float(xs.mean()), float(ys.mean())
+    cx = (B * E - 2 * C * Dd) / det
+    cy = (B * Dd - 2 * A * E) / det
+    if abs(cx) > 60 or abs(cy) > 60:            # fit ran away: a ring is not that big
+        return float(xs.mean()), float(ys.mean())
+    return float(cx + xs.mean()), float(cy + ys.mean())
+
+
 def rings(mask):
-    """Centre and size of every separate green blob."""
+    """
+    Centre and size of every separate green ring.
+
+    Every pad on a map is the same size, so the rings the author draws round
+    them are too. That is the fact that rescues a ring half-hidden under a
+    tower: measure the size off the rings that are whole, then for each ring
+    ask only where a ring of THAT size best fits the pixels it does show. A
+    free fit through half an arc drifts; a fit that already knows the radius
+    lands on the centre.
+    """
     left = mask.copy()
-    out = []
+    blobs = []
     while left.any():
         ys, xs = np.nonzero(left)
         c = component(left, (ys[0], xs[0]))
         left &= ~c
         cy, cx = np.nonzero(c)
         if cx.size >= RING_MIN:
-            out.append((float(cx.mean()), float(cy.mean()), int(cx.size)))
+            blobs.append((cx.astype(np.float64), cy.astype(np.float64)))
+
+    # the size of a whole ring: the median bounding box of the widest blobs
+    spans = sorted(((cx.max() - cx.min()) / 2, (cy.max() - cy.min()) / 2)
+                   for cx, cy in blobs)
+    whole = spans[len(spans) // 2:]
+    A = float(np.median([w for w, _ in whole]))
+    B = float(np.median([h for _, h in whole]))
+
+    out = []
+    for cx, cy in blobs:
+        ex, ey = ellipse_centre(cx, cy)
+        # then slide a ring of the known size around the free fit and keep
+        # the spot where the visible pixels sit closest to its rim
+        best = (np.inf, ex, ey)
+        for px in np.arange(ex - 24, ex + 25, 1.0):
+            for py in np.arange(ey - 24, ey + 25, 1.0):
+                r = ((cx - px) / A) ** 2 + ((cy - py) / B) ** 2 - 1
+                sq = float((r * r).mean())
+                if sq < best[0]:
+                    best = (sq, px, py)
+        out.append((best[1], best[2], int(cx.size)))
     return out
 
 
