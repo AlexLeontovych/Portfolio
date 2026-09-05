@@ -1,14 +1,16 @@
 /**
- * The five maps.
+ * The five levels: which map each is played on, and what marches across it.
  *
- * Only the road and the waves are authored. Build slots are DERIVED from the
- * road at load time — sampled on a grid, kept when they sit in the band that
- * is near enough to be useful but far enough not to overlap the road, then
- * thinned so no two crowd each other. Hand-placing slots on a hand-drawn path
- * is exactly the kind of two-number mistake that put EMBERWOOD's exit one tile
- * past the ground, and here the geometry can simply be computed instead.
+ * The road and the build pads are not authored here — they were traced off
+ * the paintings and live in maps.ts, because the picture is the authority on
+ * both. Only the waves belong to the level, and they are the only part a
+ * balance change should ever touch.
+ *
+ * A level whose map is missing falls back to a road authored here and slots
+ * derived from it, which is how the game looked before the maps existed.
  */
 
+import { MAPS } from "./maps";
 import { buildPath, distanceToPath, type Path, type Point } from "./path";
 import type { CreepId } from "./units";
 
@@ -37,7 +39,9 @@ export interface Wave {
 export interface LevelDef {
   name: string;
   biome: "forest" | "cave" | "ember";
-  /** road waypoints in board space; start and end sit off-board on purpose */
+  /** key into MAPS: the painting this level is played on */
+  map?: string;
+  /** fallback road, used only when the level has no painted map */
   road: Point[];
   waves: Wave[];
 }
@@ -46,14 +50,17 @@ export interface Level {
   def: LevelDef;
   path: Path;
   slots: Point[];
+  /** background to draw under everything, or null to draw the board by hand */
+  image: string | null;
 }
 
 const w = (...groups: WaveGroup[]): Wave => ({ groups });
 
 export const LEVELS: LevelDef[] = [
   {
-    name: "GREENWOOD GATE",
+    name: "SUNKEN TEMPLE",
     biome: "forest",
+    map: "oasis",
     road: [
       { x: -50, y: 130 }, { x: 190, y: 130 }, { x: 250, y: 190 },
       { x: 250, y: 360 }, { x: 330, y: 430 }, { x: 610, y: 430 },
@@ -74,8 +81,9 @@ export const LEVELS: LevelDef[] = [
     ],
   },
   {
-    name: "THE OLD BRIDGE",
-    biome: "forest",
+    name: "DUSTHOLLOW CANYON",
+    biome: "cave",
+    map: "canyon",
     road: [
       { x: -50, y: 430 }, { x: 150, y: 430 }, { x: 220, y: 360 },
       { x: 220, y: 200 }, { x: 300, y: 120 }, { x: 470, y: 120 },
@@ -98,8 +106,9 @@ export const LEVELS: LevelDef[] = [
     ],
   },
   {
-    name: "HOLLOW PASS",
-    biome: "cave",
+    name: "CRYSTAL HOLLOW",
+    biome: "forest",
+    map: "crystal",
     road: [
       { x: 480, y: -50 }, { x: 480, y: 110 }, { x: 380, y: 190 },
       { x: 170, y: 190 }, { x: 100, y: 270 }, { x: 100, y: 380 },
@@ -122,8 +131,9 @@ export const LEVELS: LevelDef[] = [
     ],
   },
   {
-    name: "ASHEN FIELDS",
-    biome: "cave",
+    name: "FROSTHOLD PASS",
+    biome: "forest",
+    map: "frost",
     road: [
       { x: -50, y: 270 }, { x: 130, y: 270 }, { x: 200, y: 180 },
       { x: 340, y: 110 }, { x: 470, y: 150 }, { x: 540, y: 260 },
@@ -147,8 +157,9 @@ export const LEVELS: LevelDef[] = [
     ],
   },
   {
-    name: "EMBER THRONE",
+    name: "THE EMBER FORGE",
     biome: "ember",
+    map: "forge",
     road: [
       { x: -50, y: 200 }, { x: 140, y: 200 }, { x: 220, y: 290 },
       { x: 220, y: 420 }, { x: 320, y: 490 }, { x: 640, y: 490 },
@@ -197,8 +208,14 @@ function deriveSlots(path: Path): Point[] {
 
 export function loadLevel(idx: number): Level {
   const def = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, idx))];
-  const path = buildPath(def.road);
-  return { def, path, slots: deriveSlots(path) };
+  const map = def.map ? MAPS[def.map] : undefined;
+  const path = buildPath(map ? map.road : def.road);
+  return {
+    def,
+    path,
+    slots: map ? map.plots : deriveSlots(path),
+    image: map ? map.image : null,
+  };
 }
 
 /** Total creeps in a wave, for the wave-preview strip in the HUD. */

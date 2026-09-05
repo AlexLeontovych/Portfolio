@@ -9,6 +9,11 @@
  * this game costs no new art and reads as the same world. Elite variants are
  * palette swaps of the base creep, which is how a four-sheet pack becomes
  * eight distinct enemies.
+ *
+ * Their scale is set against the towers rather than against each other: a
+ * creep that stands as tall as the tower shooting it makes the board hard to
+ * read, so the rank and file come out around two thirds of one, and only the
+ * boss is allowed to loom.
  */
 
 /* --------------------------------- creeps --------------------------------- */
@@ -43,36 +48,36 @@ export interface CreepDef {
 export const CREEPS: Record<CreepId, CreepDef> = {
   mushroom: {
     name: "Mushroom", sheet: "enemies/mushroom", hp: 70, speed: 30, armour: 0,
-    resist: 0, gold: 6, leak: 1, flying: false, scale: 1.5,
+    resist: 0, gold: 6, leak: 1, flying: false, scale: 1.15,
   },
   goblin: {
     name: "Goblin", sheet: "enemies/goblin", hp: 52, speed: 56, armour: 0,
-    resist: 0, gold: 7, leak: 1, flying: false, scale: 1.5,
+    resist: 0, gold: 7, leak: 1, flying: false, scale: 1.15,
   },
   skeleton: {
     name: "Skeleton", sheet: "enemies/skeleton", hp: 150, speed: 28, armour: 5,
-    resist: 0, gold: 14, leak: 2, flying: false, scale: 1.5,
+    resist: 0, gold: 14, leak: 2, flying: false, scale: 1.2,
   },
   flyingEye: {
     name: "Flying Eye", sheet: "enemies/flying-eye", hp: 80, speed: 70, armour: 0,
-    resist: 0.3, gold: 11, leak: 1, flying: true, scale: 1.5,
+    resist: 0.3, gold: 11, leak: 1, flying: true, scale: 1.15,
   },
   eliteGoblin: {
     name: "Goblin Raider", sheet: "enemies/goblin", hp: 130, speed: 78, armour: 2,
-    resist: 0, gold: 16, leak: 2, flying: false, scale: 1.7, tint: "#ff6a4d",
+    resist: 0, gold: 16, leak: 2, flying: false, scale: 1.3, tint: "#ff6a4d",
   },
   eliteMushroom: {
     name: "Blight Mushroom", sheet: "enemies/mushroom", hp: 260, speed: 26, armour: 8,
-    resist: 0.2, gold: 22, leak: 2, flying: false, scale: 1.9, tint: "#8f5bff",
+    resist: 0.2, gold: 22, leak: 2, flying: false, scale: 1.45, tint: "#8f5bff",
   },
   wraith: {
     name: "Wraith", sheet: "enemies/flying-eye", hp: 190, speed: 92, armour: 0,
-    resist: 0.6, gold: 26, leak: 3, flying: true, scale: 1.6, tint: "#5ee7c8",
+    resist: 0.6, gold: 26, leak: 3, flying: true, scale: 1.25, tint: "#5ee7c8",
     ignoresBlockers: true,
   },
   wizard: {
     name: "Evil Wizard", sheet: "boss/wizard", hp: 2600, speed: 22, armour: 10,
-    resist: 0.35, gold: 220, leak: 12, flying: false, scale: 1.5, boss: true,
+    resist: 0.35, gold: 220, leak: 12, flying: false, scale: 1.9, boss: true,
   },
 };
 

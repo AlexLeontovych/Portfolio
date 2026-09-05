@@ -11,9 +11,10 @@
  * designer put it.
  */
 
-import { Animator, loadAnimSet, type AnimSet } from "../platformer/sprites";
+import { Animator, loadAnimSet, loadImage, type AnimSet } from "../platformer/sprites";
 import { drawSprite, loadAtlas, type Atlas } from "./atlas";
 import { BOARD, LEVELS, loadLevel, waveSize, type Level } from "./levels";
+import { MAPS } from "./maps";
 import { distanceToPath, headingAt, pointAt, type Point } from "./path";
 import {
   CREEPS, DIFFICULTIES, SELL_REFUND, TOWERS, applyDamage,
@@ -227,6 +228,8 @@ export class TdEngine {
 
   private creepSets: Partial<Record<string, AnimSet>> = {};
   private atlas: Atlas | null = null;
+  /** background paintings, kept by file name so a replay costs no download */
+  private maps: Record<string, HTMLImageElement> = {};
   private decor: Decor[] = [];
 
   private creeps: Creep[] = [];
@@ -266,6 +269,12 @@ export class TdEngine {
 
   async load() {
     const atlas = loadAtlas("./games/td");
+    const maps = Promise.all(
+      [...new Set(LEVELS.map((l) => l.map).filter(Boolean))].map(async (id) => {
+        const file = MAPS[id as string].image;
+        return [file, await loadImage(`./games/td/maps/${file}`).catch(() => null)] as const;
+      }),
+    );
     const kinds = [...new Set(Object.values(CREEPS).map((c) => c.sheet))];
     const sets = await Promise.all(
       kinds.map((sheet) =>
@@ -277,6 +286,9 @@ export class TdEngine {
       ),
     );
     this.atlas = await atlas;
+    for (const [file, img] of await maps) {
+      if (img) this.maps[file] = img;
+    }
     if (this.destroyed) return;
     kinds.forEach((k, i) => {
       if (sets[i]) this.creepSets[k] = sets[i] as AnimSet;
@@ -918,10 +930,15 @@ export class TdEngine {
     ctx.setTransform(this.view.scale, 0, 0, this.view.scale, this.view.ox, this.view.oy);
 
     const pal = BIOMES[this.level.def.biome];
-    this.drawGround(ctx, pal);
-    this.drawRoad(ctx, pal);
-    this.drawDecor(ctx, pal);
-    this.drawSlots(ctx, pal);
+    const bg = this.level.image ? this.maps[this.level.image] : undefined;
+    if (bg) {
+      ctx.drawImage(bg, 0, 0, BOARD.w, BOARD.h);
+    } else {
+      this.drawGround(ctx, pal);
+      this.drawRoad(ctx, pal);
+      this.drawDecor(ctx, pal);
+    }
+    this.drawSlots(ctx, pal, !!bg);
     this.drawTowers(ctx);
     this.drawCreeps(ctx);
     this.drawSoldiers(ctx);
@@ -1051,24 +1068,47 @@ export class TdEngine {
     }
   }
 
-  private drawSlots(ctx: CanvasRenderingContext2D, pal: Palette) {
+  /**
+   * On a painted map the pads are already there, so an empty one only needs a
+   * hint that it can be clicked — a faint ring that firms up on hover. The
+   * dashed square is for the drawn boards, where nothing marks the spot.
+   */
+  private drawSlots(ctx: CanvasRenderingContext2D, pal: Palette, painted = false) {
     this.level.slots.forEach((s, i) => {
       if (this.towers.some((t) => t.slot === i)) return;
       const on = this.selected === i;
       ctx.save();
       ctx.translate(s.x, s.y);
-      ctx.globalAlpha = on ? 1 : 0.5;
-      ctx.strokeStyle = on ? pal.accent : "rgba(255,255,255,0.55)";
-      ctx.lineWidth = on ? 3 : 2;
-      ctx.setLineDash(on ? [] : [6, 5]);
-      ctx.beginPath();
-      ctx.roundRect(-19, -19, 38, 38, 7);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      if (on) {
-        ctx.globalAlpha = 0.16;
-        ctx.fillStyle = pal.accent;
-        ctx.fill();
+      if (painted) {
+        const pulse = 0.5 + Math.sin(this.t * 2.4 + i) * 0.12;
+        ctx.globalAlpha = on ? 0.95 : pulse;
+        ctx.strokeStyle = on ? pal.accent : "rgba(255,255,255,0.8)";
+        ctx.lineWidth = on ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, on ? 26 : 22, 0, Math.PI * 2);
+        ctx.stroke();
+        // a hammer-and-anvil dot is more art than this needs; a plus reads as
+        // "something goes here" at any size
+        ctx.beginPath();
+        ctx.moveTo(-7, 0);
+        ctx.lineTo(7, 0);
+        ctx.moveTo(0, -7);
+        ctx.lineTo(0, 7);
+        ctx.stroke();
+      } else {
+        ctx.globalAlpha = on ? 1 : 0.5;
+        ctx.strokeStyle = on ? pal.accent : "rgba(255,255,255,0.55)";
+        ctx.lineWidth = on ? 3 : 2;
+        ctx.setLineDash(on ? [] : [6, 5]);
+        ctx.beginPath();
+        ctx.roundRect(-19, -19, 38, 38, 7);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (on) {
+          ctx.globalAlpha = 0.16;
+          ctx.fillStyle = pal.accent;
+          ctx.fill();
+        }
       }
       ctx.restore();
     });

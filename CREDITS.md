@@ -35,6 +35,11 @@ The sheets arrived with the transparency checker drawn into them as real pixels,
 draws from (`public/games/td/atlas.webp`). The full-size sheets stay in `art-src/` and are never
 served.
 
+The five maps (`art-src/td/maps/`) were generated for this project too. Each was painted with its
+own road and its own build pads, so both were traced off the picture into `art-src/td/maps.json`
+and `scripts/td_maps.py` bakes them into the level data — the game follows the painting rather
+than drawing a board of its own.
+
 The creeps are the same LuizMelo sheets the platformer uses, credited above.
 
 ## UI
