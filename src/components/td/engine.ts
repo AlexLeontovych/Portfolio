@@ -1135,10 +1135,13 @@ export class TdEngine {
       const art = TOWERS[t.id].art;
 
       if (art) {
+        // the sprite's anchor is the centre of its base, so drawing it at
+        // the slot puts the base disc on the pad disc — standing in the
+        // ring, not hovering above it
         ctx.save();
-        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fillStyle = "rgba(0,0,0,0.28)";
         ctx.beginPath();
-        ctx.ellipse(t.x, t.y + 6, 24, 9, 0, 0, Math.PI * 2);
+        ctx.ellipse(t.x, t.y + 3, 27, 12, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         // one sheet per facing, six frames each: the tower turns to whichever
@@ -1146,8 +1149,8 @@ export class TdEngine {
         const face = FACING[(Math.round(t.angle / (Math.PI / 2)) + 4) % 4];
         const phase = t.fire < 0 ? 0 : Math.min(5, 1 + Math.floor((t.fire / FIRE_TIME) * 5));
         const name = `t.${art}.${tier + 1}.${face}`;
-        if (drawSprite(ctx, this.atlas, name, t.x, t.y + 8, { frame: phase })) {
-          this.drawTierPips(ctx, t.x, t.y + 12, tier);
+        if (drawSprite(ctx, this.atlas, name, t.x, t.y, { frame: phase })) {
+          this.drawTierPips(ctx, t.x, t.y + 15, tier);
           if (sel) this.drawRange(ctx, t);
           continue;
         }

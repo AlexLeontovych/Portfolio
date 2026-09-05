@@ -136,8 +136,96 @@ def load(spec, base):
         print(f"  !! {name}: sheet is {im.size} but frames {first}..{first + frames - 1}"
               f" of a {sheet_cols}-wide grid of {cw}x{ch} need {x1}x{y1} — check the grid")
         return None
-    return {"name": name, "im": im, "cw": cw, "boxes": boxes,
+    return {"name": name, "im": im, "cw": cw, "ch": ch, "boxes": boxes,
             "draw": draw, "group": group or name}
+
+
+#: sprites whose frames are registered on the drawn base rather than the cell
+ALIGN_BASE = set(TOWER_KINDS)
+#: room left round a cell for the registration shifts
+MARGIN = 48
+
+
+def base_centre(alpha, half=None):
+    """
+    Where the base of a tower is in one frame: the centre of its ellipse.
+
+    The frames were generated one at a time and the tower does not sit in
+    the same place in any two of them — its base wanders by up to a fifth of
+    the cell. So the cell is no guide to where the tower is; the drawing is.
+
+    Sideways, the base is symmetric, so the midpoints of its lowest rows all
+    lie on its centre line; the median of them is the centre, and nothing
+    else — no flash, no smoke — ever reaches that low. Vertically, the
+    centre of the disc sits half a base above its bottom edge; `half` is that
+    height, measured once on the resting frame as the distance from the
+    bottom up to the widest row, so a muzzle flash that happens to be wider
+    than the base cannot pass itself off as the base's equator.
+
+    Returns (x, y, half).
+    """
+    rows = np.nonzero((alpha > ALPHA).sum(axis=1) >= SPECK)[0]
+    if not rows.size:
+        return None
+    top, bottom = int(rows[0]), int(rows[-1])
+    foot = range(max(top, bottom - max(4, int((bottom - top) * 0.25))), bottom + 1)
+    mids = []
+    for y in foot:
+        xs = np.nonzero(alpha[y] > ALPHA)[0]
+        if xs.size:
+            mids.append((int(xs[0]) + int(xs[-1])) / 2)
+    if not mids:
+        return None
+    if half is None:
+        lower = range(max(top, bottom - int((bottom - top) * 0.45)), bottom + 1)
+        width = {y: int(np.ptp(np.nonzero(alpha[y] > ALPHA)[0])) for y in lower
+                 if (alpha[y] > ALPHA).any()}
+        widest = max(width.values())
+        equator = np.mean([y for y, w in width.items() if w >= widest * 0.96])
+        half = float(bottom - equator)
+    return float(np.median(mids)), float(bottom - half), half
+
+
+def register(s):
+    """
+    Re-lay a sprite's frames so the base is in the same place in every one.
+
+    Each frame is measured, then pasted into a fresh cell shifted so its base
+    centre lands where the sprite's median base centre is. From here on the
+    sprite is treated like any other, except that its anchor is that base
+    centre rather than the cell's bottom middle: the engine puts the anchor
+    on the pad, so the tower stands in the ring rather than hovering above
+    it, and turning or firing moves nothing but the turret.
+    """
+    im = s["im"]
+    cw, ch = s["cw"], s["ch"] if "ch" in s else s["cw"]
+    a = np.asarray(im)[:, :, 3]
+    centres = []
+    half = None
+    for (x0, y0, x1, y1) in s["boxes"]:
+        # the first frame is the resting pose and sets the base's height
+        c = base_centre(a[y0:y1, x0:x1], half)
+        if c is None:
+            centres.append((cw / 2, ch))
+            continue
+        half = c[2] if half is None else half
+        centres.append((c[0], c[1]))
+    ax = float(np.median([c[0] for c in centres]))
+    ay = float(np.median([c[1] for c in centres]))
+    drift = max(abs(c[0] - ax) for c in centres), max(abs(c[1] - ay) for c in centres)
+
+    W2, H2 = cw + 2 * MARGIN, ch + 2 * MARGIN
+    sheet = Image.new("RGBA", (W2 * len(s["boxes"]), H2), (0, 0, 0, 0))
+    boxes = []
+    for i, ((x0, y0, x1, y1), (bx, by)) in enumerate(zip(s["boxes"], centres)):
+        frame = im.crop((x0, y0, x1, y1))
+        ox = i * W2 + MARGIN + int(round(ax - bx))
+        oy = MARGIN + int(round(ay - by))
+        sheet.paste(frame, (ox, oy), frame)
+        boxes.append((i * W2, 0, (i + 1) * W2, H2))
+    s["im"], s["boxes"], s["cw"], s["ch"] = sheet, boxes, W2, H2
+    s["base"] = (MARGIN + ax, MARGIN + ay)
+    s["drift"] = drift
 
 
 def content_box(im, boxes):
@@ -176,6 +264,8 @@ def main():
         if s is None:
             print(f"  -- skipped, source not present: {spec[0]}")
             continue
+        if s["group"] in ALIGN_BASE:
+            register(s)
         s["own"] = content_box(s["im"], s["boxes"])
         if s["own"] is None:
             print(f"  !! {s['name']}: every frame is empty")
@@ -215,9 +305,12 @@ def main():
             # The engine anchors on that, so a sprite stands on the road at
             # the spot its author drew it standing, and a swing that widens
             # the trim box does not shove it sideways.
-            "ax": round((s["cw"] / 2 - bx0) * scale, 1),
-            "ay": round((g["ref"][3] - by0) * scale, 1),
+            "ax": round(((s["base"][0] if "base" in s else s["cw"] / 2) - bx0) * scale, 1),
+            "ay": round(((s["base"][1] if "base" in s else g["ref"][3]) - by0) * scale, 1),
         })
+        if "drift" in s:
+            print(f"  {s['name']:15} base drift before registration "
+                  f"{s['drift'][0]:5.1f} x {s['drift'][1]:5.1f} px")
 
     # shelf pack, tallest first — good enough for a few dozen strips and it
     # keeps the atlas close to square without a bin-packing library
