@@ -315,7 +315,7 @@ export class TdEngine {
     this.blasts = [];
     this.spawning = [];
     this.selected = null;
-    this.gold = d.gold;
+    this.gold = d.gold + (this.level.def.gold ?? 0);
     this.lives = d.lives;
     this.maxLives = d.lives;
     this.waveIdx = -1;

@@ -39,6 +39,15 @@ export interface Wave {
 export interface LevelDef {
   name: string;
   /**
+   * Gold this map hands the player on top of the difficulty's purse.
+   *
+   * A later map is bigger, and its waves are heavier from the first one, but
+   * the difficulty gives out the same coins whichever map they are spent on.
+   * Starting the fourth map on two towers against twelve elite goblins is
+   * not a hard opening, it is an impossible one.
+   */
+  gold?: number;
+  /**
    * Multiplied into every creep's health on this map.
    *
    * A later level is harder because more of them come, not because each one
@@ -93,6 +102,7 @@ export const LEVELS: LevelDef[] = [
   },
   {
     name: "DUSTHOLLOW CANYON",
+    gold: 60,
     hp: 1.06,
     biome: "cave",
     map: "canyon",
@@ -119,6 +129,7 @@ export const LEVELS: LevelDef[] = [
   },
   {
     name: "CRYSTAL HOLLOW",
+    gold: 130,
     hp: 1.12,
     biome: "forest",
     map: "crystal",
@@ -130,8 +141,9 @@ export const LEVELS: LevelDef[] = [
       { x: 480, y: 230 }, { x: 480, y: 590 },
     ],
     waves: [
-      w({ creep: "skeleton", count: 7, gap: 1.4 }),
-      w({ creep: "flyingEye", count: 11, gap: 0.8 }),
+      w({ creep: "goblin", count: 10, gap: 0.9 }),
+      w({ creep: "flyingEye", count: 9, gap: 0.9 }),
+      w({ creep: "skeleton", count: 8, gap: 1.3 }, { creep: "goblin", count: 10, gap: 0.7, delay: 3 }),
       w({ creep: "eliteGoblin", count: 10, gap: 0.8 }),
       w({ creep: "eliteMushroom", count: 5, gap: 2.0 }, { creep: "skeleton", count: 8, gap: 1.2, delay: 4 }),
       w({ creep: "wraith", count: 6, gap: 1.6 }, { creep: "goblin", count: 12, gap: 0.7, delay: 3 }),
@@ -145,6 +157,7 @@ export const LEVELS: LevelDef[] = [
   },
   {
     name: "FROSTHOLD PASS",
+    gold: 200,
     hp: 1.18,
     biome: "forest",
     map: "frost",
@@ -156,8 +169,10 @@ export const LEVELS: LevelDef[] = [
       { x: 790, y: 200 }, { x: 880, y: 110 }, { x: 1010, y: 110 },
     ],
     waves: [
+      w({ creep: "goblin", count: 12, gap: 0.8 }),
+      w({ creep: "mushroom", count: 12, gap: 0.8 }, { creep: "flyingEye", count: 8, gap: 0.9, delay: 4 }),
+      w({ creep: "skeleton", count: 10, gap: 1.2 }, { creep: "goblin", count: 12, gap: 0.7, delay: 3 }),
       w({ creep: "eliteGoblin", count: 12, gap: 0.8 }),
-      w({ creep: "skeleton", count: 10, gap: 1.2 }),
       w({ creep: "wraith", count: 7, gap: 1.4 }, { creep: "flyingEye", count: 10, gap: 0.8, delay: 4 }),
       w({ creep: "eliteMushroom", count: 8, gap: 1.5 }, { creep: "goblin", count: 12, gap: 0.7, delay: 3 }),
       w({ creep: "skeleton", count: 14, gap: 0.9 }, { creep: "eliteGoblin", count: 12, gap: 0.6, delay: 5 }),
@@ -172,6 +187,7 @@ export const LEVELS: LevelDef[] = [
   },
   {
     name: "THE EMBER FORGE",
+    gold: 260,
     hp: 1.25,
     biome: "ember",
     map: "forge",
@@ -183,8 +199,10 @@ export const LEVELS: LevelDef[] = [
       { x: 1010, y: 60 },
     ],
     waves: [
-      w({ creep: "skeleton", count: 12, gap: 1.0 }),
-      w({ creep: "wraith", count: 9, gap: 1.2 }, { creep: "goblin", count: 12, gap: 0.7, delay: 3 }),
+      w({ creep: "goblin", count: 14, gap: 0.8 }),
+      w({ creep: "flyingEye", count: 12, gap: 0.8 }, { creep: "mushroom", count: 12, gap: 0.7, delay: 4 }),
+      w({ creep: "skeleton", count: 12, gap: 1.0 }, { creep: "goblin", count: 14, gap: 0.6, delay: 3 }),
+      w({ creep: "wraith", count: 9, gap: 1.2 }, { creep: "eliteGoblin", count: 14, gap: 0.6, delay: 3 }),
       w({ creep: "eliteMushroom", count: 10, gap: 1.3 }, { creep: "eliteGoblin", count: 14, gap: 0.6, delay: 5 }),
       w({ creep: "flyingEye", count: 18, gap: 0.5 }, { creep: "wraith", count: 9, gap: 1.1, delay: 4 }),
       w({ creep: "skeleton", count: 18, gap: 0.7 }, { creep: "mushroom", count: 14, gap: 0.6, delay: 3 }),
