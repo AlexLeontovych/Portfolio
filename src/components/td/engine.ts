@@ -27,7 +27,7 @@ const MAX_CATCHUP = 0.25;
 const BETWEEN_WAVES = 12;
 /** Calling a wave early pays this much gold per remaining second. */
 const EARLY_BONUS = 2;
-/** One creep in this many takes the map's second road, where there is one. */
+/** One creep in this many takes another of the map's roads, where it has one. */
 const LANE_SHARE = 4;
 /** How long a tower spends playing its six firing frames. */
 const FIRE_TIME = 0.42;
@@ -632,16 +632,17 @@ export class TdEngine {
   /**
    * Which way out this creep takes.
    *
-   * Every fourth one goes down the map's other road, where the map has one.
-   * A trickle rather than half the wave: the point is that the far side of a
+   * Every fourth one goes down another of the map's roads, taking them in
+   * turn where there is more than one — the forge has two besides its own. A
+   * trickle rather than half the wave: the point is that the far side of a
    * map is worth defending at all, not that it needs a second army. A boss
    * always walks the main road — it is the wave, and sending it round the
    * back would be a shrug rather than a climax.
    */
   private laneFor(sent: number): number {
-    const lanes = this.level.paths.length;
-    if (lanes < 2) return 0;
-    return sent % LANE_SHARE === LANE_SHARE - 1 ? 1 : 0;
+    const others = this.level.paths.length - 1;
+    if (others < 1 || sent % LANE_SHARE !== LANE_SHARE - 1) return 0;
+    return 1 + (Math.floor(sent / LANE_SHARE) % others);
   }
 
   private spawnCreep(id: CreepId, lane = 0) {

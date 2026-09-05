@@ -19,6 +19,7 @@ The full-size paintings live in art-src/td/maps. Pass --images to republish
 them; without it the script only re-emits maps.ts from maps.json.
 """
 import json
+import math
 import os
 import sys
 import numpy as np
@@ -33,6 +34,8 @@ OUT_TS = os.path.join(ROOT, "src", "components", "td", "maps.ts")
 #: sharp as it ever gets drawn on a large screen
 PUBLISH = (1280, 720)
 QUALITY = 80
+#: the board every traced point is measured in
+W, H = 960, 540
 
 HEADER = """/**
  * The five painted maps, and what was traced off each.
@@ -58,13 +61,15 @@ export interface MapDef {
   /** gate facades drawn OVER the creeps, so they come out from behind the arch */
   overlay?: string;
   /**
-   * A second way across the map, complete from the same spawn as the road.
+   * The map's other ways across, each complete from its own gate to its own.
    *
-   * Some maps are painted with two ways out. Sending part of every wave down
-   * the other one is what stops half a map being scenery: the plots along it
-   * are worth buying, and the player has two lines to hold instead of one.
+   * Several maps are painted with more than one way through. Sending part of
+   * every wave down the others is what stops half a map being scenery: the
+   * plots along them are worth buying, and the player has more than one line
+   * to hold. Each is stored whole — a way that shares the road for a while
+   * carries that stretch of it — so nothing has to be decided at a junction.
    */
-  branch?: Point[];
+  branches?: Point[][];
 }
 
 export const MAPS: Record<string, MapDef> = {
@@ -74,6 +79,10 @@ export const MAPS: Record<string, MapDef> = {
 #: how far past the edge the road runs, so creeps walk on and off rather than
 #: appearing and vanishing at the border
 OVERRUN = 80
+#: how close to the border an end has to be to count as reaching it
+BORDER = 64
+#: how much of the road's tail its heading off the board is taken from
+AIM = 36
 #: half the width of the road, in board px: the strip creeps actually walk on.
 #: A gate may override it — a paved ramp is wider than a doorway.
 BAND = 14
@@ -86,9 +95,23 @@ def extend_ends(road):
     The traced road starts and ends where the artist's stroke does, which is
     at the gate — so a creep would appear at the gate rather than walk in
     through it, and vanish at the far one instead of leaving.
+
+    Only an end that reaches the border gets this. Not every way across ends
+    at one: the glacier's second one ends at the mouth of an ice cave in the
+    middle of the map, and running that on would march its creeps another
+    eighty units into the mountain.
     """
     out = [list(p) for p in road]
-    for a, b in ((0, 1), (-1, -2)):
+    for a, step in ((0, 1), (len(out) - 1, -1)):
+        x, y = out[a]
+        if min(x, W - 1 - x, y, H - 1 - y) > BORDER:
+            continue
+        # aim along the last stretch rather than the last point: the sampling
+        # is fine enough that one neighbour is mostly rounding, and the mine
+        # trestle's exit leaves at 40 degrees, not flat
+        b, i = a + step, a + step
+        while 0 <= i < len(out) and math.dist(out[a], out[i]) < AIM:
+            b, i = i, i + step
         dx, dy = out[a][0] - out[b][0], out[a][1] - out[b][1]
         n = (dx * dx + dy * dy) ** 0.5 or 1.0
         out[a] = [out[a][0] + dx / n * OVERRUN, out[a][1] + dy / n * OVERRUN]
@@ -196,8 +219,11 @@ def main():
         if m.get("gates"):
             body.append(f'    overlay: "{mid}.over.webp",')
         body.append(wrap("road", extend_ends(m["road"])))
-        if m.get("branch"):
-            body.append(wrap("branch", extend_ends(m["branch"])))
+        if m.get("branches"):
+            body.append("    branches: [")
+            for lane in m["branches"]:
+                body.append(wrap("", extend_ends(lane), indent=6).replace(": [", "[", 1))
+            body.append("    ],")
         body.append(wrap("plots", m["plots"]))
         body.append("  },")
     body.append("};\n")

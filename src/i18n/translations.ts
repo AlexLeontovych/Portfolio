@@ -208,7 +208,7 @@ export const dict = {
       neon_desc: "Pseudo-3D endless racer in the OutRun style. Segmented road, baked sprites, a 3D garage on three.js, tilt steering, rewind, cockpit view.",
       plat_name: "EMBERWOOD",
       td_name: "IRONWOOD KEEP",
-      td_desc: "Tower defense: five maps, five towers with three tiers each, eight creeps and three difficulties. The road and the build plots are traced off the painted maps, so a tower stands on the pad the artist drew and creeps walk the path he painted.",
+      td_desc: "Tower defense: five maps, five towers with three tiers each, eight creeps and three difficulties. The roads and the build plots are traced off the painted maps, so a tower stands on the pad the artist drew and creeps walk the paths they painted — on three of the maps that means more than one way through, and part of every wave takes the other one.",
       plat_desc: "Pixel-art action platformer: five levels, two heroes with different move sets, four enemy types and a three-phase boss. Fixed-step physics, synthesised sound.",
     },
     finish: {
@@ -489,7 +489,7 @@ export const dict = {
       neon_desc: "Псевдо-3D бесконечная гонка в стиле OutRun. Сегментная дорога, запечённые спрайты, 3D-гараж на three.js, управление наклоном телефона, перемотка, вид из кабины.",
       plat_name: "EMBERWOOD",
       td_name: "IRONWOOD KEEP",
-      td_desc: "Tower defense: пять карт, пять башен по три уровня, восемь врагов и три сложности. Дорога и площадки сняты с нарисованных карт, поэтому башня встаёт на нарисованный пятак, а враги идут по нарисованной тропе.",
+      td_desc: "Tower defense: пять карт, пять башен по три уровня, восемь врагов и три сложности. Дороги и площадки сняты с нарисованных карт, поэтому башня встаёт на нарисованный пятак, а враги идут по нарисованным тропам — на трёх картах их несколько, и часть каждой волны идёт в обход.",
       plat_desc: "Пиксельный экшен-платформер: пять уровней, два героя с разными приёмами, четыре типа врагов и босс на три фазы. Физика с фиксированным шагом, синтезированный звук.",
     },
     finish: {
@@ -770,7 +770,7 @@ export const dict = {
       neon_desc: "Псевдо-3D нескінченна гонка у стилі OutRun. Сегментна дорога, запечені спрайти, 3D-гараж на three.js, керування нахилом телефона, перемотка, вид із кабіни.",
       plat_name: "EMBERWOOD",
       td_name: "IRONWOOD KEEP",
-      td_desc: "Tower defense: п'ять карт, п'ять веж по три рівні, вісім ворогів і три складності. Дорога і майданчики зняті з намальованих карт, тож вежа стає на намальований п'ятак, а вороги йдуть намальованою стежкою.",
+      td_desc: "Tower defense: п'ять карт, п'ять веж по три рівні, вісім ворогів і три складності. Дороги і майданчики зняті з намальованих карт, тож вежа стає на намальований п'ятак, а вороги йдуть намальованими стежками — на трьох картах їх кілька, і частина кожної хвилі йде в обхід.",
       plat_desc: "Піксельний екшен-платформер: п'ять рівнів, два герої з різними прийомами, чотири типи ворогів і бос на три фази. Фізика з фіксованим кроком, синтезований звук.",
     },
     finish: {

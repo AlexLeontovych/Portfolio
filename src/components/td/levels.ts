@@ -252,8 +252,7 @@ export function loadLevel(idx: number): Level {
   const def = LEVELS[Math.max(0, Math.min(LEVELS.length - 1, idx))];
   const map = def.map ? MAPS[def.map] : undefined;
   const path = buildPath(map ? map.road : def.road);
-  const paths = [path];
-  if (map?.branch) paths.push(buildPath(map.branch));
+  const paths = [path, ...(map?.branches ?? []).map(buildPath)];
   return {
     def,
     path,
