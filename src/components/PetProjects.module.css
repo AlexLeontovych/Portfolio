@@ -42,9 +42,17 @@
   image-rendering: pixelated;
 }
 
+/*
+ * Cards in a row are already the same height, but the content is packed from
+ * the top, so a description one line longer than its neighbour's pushes the
+ * stack and the Play button down with it. Letting the body fill the card and
+ * the description absorb the slack bottom-aligns everything underneath it, so
+ * the chips and buttons line up across cards whatever the copy does.
+ */
 .body {
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: 0.7rem;
   padding: clamp(1.1rem, 2.4vw, 1.5rem);
 }
@@ -64,6 +72,7 @@
 }
 
 .desc {
+  flex: 1;
   margin: 0;
   color: var(--muted);
   font-size: 0.92rem;
