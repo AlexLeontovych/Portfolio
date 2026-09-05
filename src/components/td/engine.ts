@@ -732,9 +732,16 @@ export class TdEngine {
       if (c.blocker && (c.blocker.dead || c.blocker.hp <= 0)) c.blocker = null;
       if (c.blocker) {
         c.swing -= dt;
-        c.anim?.play("attack");
+        // The attack sheets do not loop, and their last frame is the follow
+        // through — a great white arc of a sword swing on most of them. Asking
+        // for the attack once and leaving it there froze that arc over the
+        // fight for as long as it lasted. So it is played again on every blow
+        // and dropped as soon as it has run, which puts the arc where it
+        // belongs: on the blow.
+        if (c.anim?.current === "attack" && c.anim.done) c.anim.play("walk");
         if (c.swing <= 0) {
           c.swing = 1.1;
+          c.anim?.play("attack", true);
           c.blocker.hp -= Math.max(4, c.def.hp * 0.06);
           if (c.blocker.hp <= 0) {
             c.blocker.dead = true;

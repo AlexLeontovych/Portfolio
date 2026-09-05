@@ -63,6 +63,11 @@ QUIET = 3
 SOLID = 24
 #: gate phases kept, out of the pack's four: shut, ajar, open
 PHASES = (0, 1, 2)
+#: how thick a limb has to be to count as body when frames are laid over one
+#: another — a sword blade is thinner than this and a torso is not
+LIMB = 4
+#: the furthest a frame may be moved to lay it over its reference
+SLIDE = 90
 
 
 def bands(mask, n, pitch, slack=SLACK):
@@ -111,14 +116,56 @@ def foot(alpha):
     return float(np.median(mids)), bottom
 
 
+def core(mask, box):
+    """A drawing's body, in a common frame: eroded, so no sword and no fringe."""
+    out = np.zeros(box, dtype=bool)
+    h = min(box[0], mask.shape[0])
+    w = min(box[1], mask.shape[1])
+    out[:h, :w] = mask[:h, :w]
+    return ~co._dilate(~out, LIMB)
+
+
+def lay_over(mask, ref):
+    """
+    How far to move a drawing so its body lands on the reference's.
+
+    Anchoring a walking man on his feet is what made him tremble: the middle
+    of his lowest rows is wherever the planted foot happens to be, and that
+    swings half a stride each way, so the body slides to follow it. Nothing
+    about a character is reliably still except the character — so each frame
+    is laid over the one before it, or over the pose it varies from, by the
+    shift that puts the most of one body on top of the other. Legs and arms
+    move within that; the body does not.
+
+    Eroding first is what keeps a sword out of it: a blade is a few pixels
+    thick and disappears, while the torso it belongs to barely changes.
+    """
+    a = np.fft.rfft2(mask.astype(np.float32))
+    b = np.fft.rfft2(ref.astype(np.float32))
+    c = np.fft.irfft2(a * np.conj(b), mask.shape)
+    # only shifts small enough to be the generator's drift are candidates
+    keep = np.full(c.shape, -1.0, dtype=np.float32)
+    s = SLIDE
+    keep[:s + 1, :s + 1] = c[:s + 1, :s + 1]
+    keep[:s + 1, -s:] = c[:s + 1, -s:]
+    keep[-s:, :s + 1] = c[-s:, :s + 1]
+    keep[-s:, -s:] = c[-s:, -s:]
+    dy, dx = np.unravel_index(int(np.argmax(keep)), c.shape)
+    if dy > c.shape[0] // 2:
+        dy -= c.shape[0]
+    if dx > c.shape[1] // 2:
+        dx -= c.shape[1]
+    return int(dx), int(dy)
+
+
 def relay(sheet, rows, cols, cell, ground):
     """
-    Re-lay a sheet of drawings onto a true grid, every one stood up straight.
+    Cut a sheet of drawings into a true grid, one drawing to a cell.
 
-    Each drawing is found between the gaps, measured, and pasted into a fresh
-    cell with the middle of its feet on the cell's centre line and its lowest
-    pixel on the ground line. From here the grid is real and everything
-    downstream — trimming, scaling, anchoring — can believe it.
+    Where each one sits inside its cell is decided later, on what is left of
+    it after the backdrop's leftovers have been swept up. All this pass has
+    to do is find the drawings — between the empty lines, not on the
+    manifest's grid — and give each one a cell with room to be moved in.
     """
     a = np.asarray(sheet)
     h, w = a.shape[:2]
@@ -133,21 +180,39 @@ def relay(sheet, rows, cols, cell, ground):
             f = foot(piece[:, :, 3])
             if f is None:
                 continue
-            fx, fy = f
-            drift = max(drift, abs(fx - (x1 - x0) / 2))
-            ox = int(round(c * cell + cell / 2 - fx))
-            oy = int(round(r * cell + ground - fy))
-            ph, pw = piece.shape[:2]
-            sx0, sy0 = max(0, -ox), max(0, -oy)
-            dx0, dy0 = max(0, ox), max(0, oy)
-            dw = min(pw - sx0, cols * cell - dx0)
-            dh = min(ph - sy0, rows * cell - dy0)
-            if dw <= 0 or dh <= 0:
-                continue
-            patch = piece[sy0:sy0 + dh, sx0:sx0 + dw]
-            dst = out[dy0:dy0 + dh, dx0:dx0 + dw]
-            np.copyto(dst, patch, where=patch[:, :, 3:] > dst[:, :, 3:])
+            drift = max(drift, abs(f[0] - (x1 - x0) / 2))
+            paste(out, piece,
+                  int(round(c * cell + cell / 2 - f[0])),
+                  int(round(r * cell + ground - f[1])),
+                  (c * cell, r * cell, (c + 1) * cell, (r + 1) * cell))
     return out, drift
+
+
+def shifted(m, dx, dy):
+    """A mask or a picture moved, with nothing wrapping round the edges."""
+    out = np.zeros_like(m)
+    h, w = m.shape[:2]
+    sy0, dy0 = max(0, -dy), max(0, dy)
+    sx0, dx0 = max(0, -dx), max(0, dx)
+    hh, ww = h - abs(dy), w - abs(dx)
+    if hh > 0 and ww > 0:
+        out[dy0:dy0 + hh, dx0:dx0 + ww] = m[sy0:sy0 + hh, sx0:sx0 + ww]
+    return out
+
+
+def paste(out, piece, px, py, clip):
+    """Draw a piece into the grid at (px, py), kept inside its own cell."""
+    cx0, cy0, cx1, cy1 = clip
+    ph, pw = piece.shape[:2]
+    sx0, sy0 = max(0, cx0 - px), max(0, cy0 - py)
+    dx0, dy0 = max(cx0, px), max(cy0, py)
+    dw = min(pw - sx0, cx1 - dx0)
+    dh = min(ph - sy0, cy1 - dy0)
+    if dw <= 0 or dh <= 0:
+        return
+    patch = piece[sy0:sy0 + dh, sx0:sx0 + dw]
+    dst = out[dy0:dy0 + dh, dx0:dx0 + dw]
+    np.copyto(dst, patch, where=patch[:, :, 3:] > dst[:, :, 3:])
 
 
 def door_mask(base, other):
@@ -237,16 +302,31 @@ def mend(rgba, cell):
         return rgba, 0
     total = int(gap.sum())
     rgba[:, :, 3] = np.where(gap, 255, rgba[:, :, 3])
+
+    # Average the neighbours rather than copy one of them. A hole punched out
+    # of a helmet is ringed by the helmet AND by the black line drawn round
+    # it, and copying whichever neighbour came first left a dark speck that
+    # flickered on and off as the frames ran. A mean over what is around it
+    # takes the helmet, because most of what is around it is helmet.
     todo = gap.copy()
-    for _ in range(8):
+    rgb = rgba[:, :, :3].astype(np.float32)
+    for _ in range(12):
         if not todo.any():
             break
-        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
-            src = np.roll(np.roll(rgba, dy, axis=0), dx, axis=1)
-            ok = np.roll(np.roll(~todo & (solid | ~gap), dy, axis=0), dx, axis=1)
-            take = todo & ok
-            rgba[take] = src[take]
-            todo &= ~take
+        acc = np.zeros(rgb.shape, dtype=np.float32)
+        cnt = np.zeros(rgb.shape[:2], dtype=np.float32)
+        known = (~todo & solid).astype(np.float32)
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if not dy and not dx:
+                    continue
+                acc += np.roll(np.roll(rgb * known[:, :, None], dy, 0), dx, 1)
+                cnt += np.roll(np.roll(known, dy, 0), dx, 1)
+        take = todo & (cnt > 0)
+        rgb[take] = acc[take] / cnt[take][:, None]
+        todo &= ~take
+        solid = solid | take
+    rgba[:, :, :3] = np.clip(rgb, 0, 255).astype(np.uint8)
     return rgba, total
 
 
@@ -292,36 +372,56 @@ def outsiders(grid, cell):
     return out & grey
 
 
-def settle(grid, cell, ground):
+def stand_up(grid, cell, ground, chain=False, ref=None):
     """
-    Stand every drawing up again once the backdrop's leftovers are gone.
+    Put every drawing where it belongs in its cell, judged on what is left.
 
-    The first pass measures where a drawing stands before anything has been
-    swept up, so a smear of backdrop under a boot counts as the boot and the
-    soldier is planted that much too high. Sweeping then leaves him hanging.
-    Measuring a second time, on what is left, costs nothing and is the only
-    honest place to do it — there is no telling litter from feet until the
-    litter is gone.
+    The first of a row is stood on its feet: the middle of its lowest rows on
+    the centre line, its lowest pixel on the ground. Every other frame is laid
+    over that one BODY to body rather than stood on its own feet, and that is
+    the whole point of this pass. The middle of a walking man's lowest rows is
+    wherever the planted foot happens to be; it swings half a stride each way,
+    and pinning it to the centre line drags the body along with it — four to
+    eight pixels of a twenty-six pixel sprite, every frame, which is exactly
+    what trembling on the spot looks like.
+
+    It runs after the sweeping up, not before: until the litter is gone there
+    is no telling a smear of backdrop under a boot from the boot.
+
+    `chain` lays each frame over the one before rather than over the first. A
+    loop must not drift, so idle, walk and attack all measure from frame one;
+    a death is not a loop, and measuring a man lying down against the same man
+    standing up would drag his body across the road as he falls.
+
+    `ref` carries a row's first body in from another sheet, so all four of a
+    soldier's actions agree and he does not jump when he changes one.
     """
     h, w = grid.shape[:2]
-    moved = 0
-    for cy in range(0, h - cell + 1, cell):
-        for cx in range(0, w - cell + 1, cell):
-            box = grid[cy:cy + cell, cx:cx + cell]
-            f = foot(box[:, :, 3])
-            if f is None:
+    rows, cols = h // cell, w // cell
+    firsts, moved = [], 0
+    for r in range(rows):
+        base = ref[r] if ref is not None else None
+        for c in range(cols):
+            box = grid[r * cell:(r + 1) * cell, c * cell:(c + 1) * cell]
+            here = ~co._dilate(~(box[:, :, 3] > SOLID), LIMB)
+            if not here.any():
                 continue
-            dx, dy = int(round(cell / 2 - f[0])), int(round(ground - f[1]))
-            if not dx and not dy:
-                continue
+            if base is None:
+                f = foot(box[:, :, 3])
+                if f is None:
+                    continue
+                dx, dy = int(round(cell / 2 - f[0])), int(round(ground - f[1]))
+            else:
+                sx, sy = lay_over(here, base)
+                dx, dy = -sx, -sy
             moved = max(moved, abs(dx), abs(dy))
-            shifted = np.zeros_like(box)
-            sy0, dy0 = max(0, -dy), max(0, dy)
-            sx0, dx0 = max(0, -dx), max(0, dx)
-            hh, ww = cell - abs(dy), cell - abs(dx)
-            shifted[dy0:dy0 + hh, dx0:dx0 + ww] = box[sy0:sy0 + hh, sx0:sx0 + ww]
-            grid[cy:cy + cell, cx:cx + cell] = shifted
-    return grid, moved
+            if dx or dy:
+                box[...] = shifted(box, dx, dy)
+            if c == 0 or chain or base is None:
+                base = ~co._dilate(~(box[:, :, 3] > SOLID), LIMB)
+            if c == 0:
+                firsts.append(base)
+    return grid, moved, firsts
 
 
 def clean(grid, cell):
@@ -335,14 +435,14 @@ def clean(grid, cell):
     return grid, int(litter.sum()), mended
 
 
-def finish(grid, cell, ground, stripped):
-    """Sweep up after the cut, mend it, and stand everything up straight."""
-    if not stripped:
-        return grid, ""
-    grid, litter, mended = clean(grid, cell)
-    grid, moved = settle(grid, cell, ground)
-    return grid, (f", {litter} px of backdrop swept up, {mended} mended, "
-                  f"{moved}px of standing up again")
+def finish(grid, cell, ground, stripped, chain=False, ref=None):
+    """Sweep up after the cut, mend it, and lay the frames over one another."""
+    note = ""
+    if stripped:
+        grid, litter, mended = clean(grid, cell)
+        note = f", {litter} px of backdrop swept up and {mended} mended"
+    grid, moved, firsts = stand_up(grid, cell, ground, chain, ref)
+    return grid, note + f", laid over one another by up to {moved}px", firsts
 
 
 def sheet_of(pack, rel):
@@ -369,7 +469,7 @@ def main():
         # ---- the building -------------------------------------------------
         sheet, stripped = sheet_of(pack, f"barracks/level_{level}/gate.png")
         grid, drift = relay(sheet, 4, 4, KEEP_CELL, KEEP_GROUND)
-        grid, _ = finish(grid, KEEP_CELL, KEEP_GROUND, stripped)
+        grid, _, _ = finish(grid, KEEP_CELL, KEEP_GROUND, stripped)
         out = np.zeros((4 * KEEP_CELL, len(PHASES) * KEEP_CELL, 4), dtype=np.uint8)
         for r in range(4):
             row = [grid[r * KEEP_CELL:(r + 1) * KEEP_CELL, p * KEEP_CELL:(p + 1) * KEEP_CELL]
@@ -380,21 +480,27 @@ def main():
         dst = os.path.join(OUT, "barracks", f"level_{level}.webp")
         Image.fromarray(out, "RGBA").save(dst, "WEBP", quality=94, method=6)
         print(f"  barracks level {level}: 4 facings x {len(PHASES)} phases, "
-              f"drawings were up to {drift:.0f}px off centre, "
+              f"laid over one another by up to {drift:.0f}px, "
               f"{os.path.getsize(dst) / 1024:.0f} kB")
 
         # ---- its garrison --------------------------------------------------
         unit = squads[level]["unit"]
         folder = os.path.join(OUT, "soldiers", f"level_{level}")
         os.makedirs(folder, exist_ok=True)
+        stand = None
         for action in ("idle", "walk", "attack", "death"):
             sheet, stripped = sheet_of(pack, f"units/level_{level}/{action}.png")
+            # idle sets where this man stands; the other three are laid over
+            # it so he does not jump sideways when he changes what he is doing
             grid, drift = relay(sheet, 4, 6, UNIT_CELL, UNIT_GROUND)
-            grid, note = finish(grid, UNIT_CELL, UNIT_GROUND, stripped)
+            grid, note, firsts = finish(grid, UNIT_CELL, UNIT_GROUND, stripped,
+                                        chain=(action == "death"), ref=stand)
+            if stand is None:
+                stand = firsts
             dst = os.path.join(folder, f"{action}.webp")
             Image.fromarray(grid, "RGBA").save(dst, "WEBP", quality=94, method=6)
             print(f"    {unit:8} {action:6}: 4 facings x 6 frames, "
-                  f"up to {drift:.0f}px off centre{note}, "
+                  f"laid over the pose before it by up to {drift:.0f}px{note}, "
                   f"{os.path.getsize(dst) / 1024:.0f} kB")
 
 
