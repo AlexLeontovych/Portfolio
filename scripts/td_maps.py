@@ -71,6 +71,22 @@ OVERRUN = 80
 BAND = 14
 
 
+def extend_ends(road):
+    """
+    Run the first and last segment out past the edge of the board.
+
+    The traced road starts and ends where the artist's stroke does, which is
+    at the gate — so a creep would appear at the gate rather than walk in
+    through it, and vanish at the far one instead of leaving.
+    """
+    out = [list(p) for p in road]
+    for a, b in ((0, 1), (-1, -2)):
+        dx, dy = out[a][0] - out[b][0], out[a][1] - out[b][1]
+        n = (dx * dx + dy * dy) ** 0.5 or 1.0
+        out[a] = [out[a][0] + dx / n * OVERRUN, out[a][1] + dy / n * OVERRUN]
+    return out
+
+
 def _dilate(m, r):
     out = m.copy()
     for dy in range(-r, r + 1):

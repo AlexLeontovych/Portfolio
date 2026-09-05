@@ -19,6 +19,12 @@ Both are scaled into board space and written into art-src/td/maps.json for
 the map named, replacing whatever was traced before. An overlay of the
 result on the author's picture goes into art-src/td/traces to check.
 
+The markup can be drawn on a screenshot of the running game rather than on
+the bare map. The game letterboxes the board — it fits 960x540 into whatever
+canvas it gets and centres it — so the same rule run backwards says which
+part of the screenshot is the board, and everything is measured in board
+coordinates from there.
+
 The author's markups are kept in art-src/td/markup/<map>.webp, so a map can
 be re-read from them at any time.
 
@@ -44,16 +50,40 @@ W, H = tr.W, tr.H
 RING_MIN = 120
 
 
+def to_board(pic):
+    """
+    Crop a screenshot down to the board the game drew inside it.
+
+    engine.resize fits the board with min(W/960, H/540) and centres it, so
+    the board is a rectangle of that size in the middle of the canvas. A
+    markup drawn on a bare map has the board's own aspect and this is a
+    no-op; one drawn on a screenshot is not, and measuring it as though it
+    were would put every plot a few pixels out and the road further.
+    """
+    w, h = pic.size
+    k = min(w / W, h / H)
+    ox, oy = (w - W * k) / 2, (h - H * k) / 2
+    box = (round(ox), round(oy), round(ox + W * k), round(oy + H * k))
+    return pic.crop(box).resize((W, H), Image.LANCZOS), k
+
+
 def red_mask(a):
-    """The author's stroke: red well above the other two channels."""
+    """
+    The author's stroke: a red far beyond anything the maps are painted in.
+
+    The canyon is orange rock from edge to edge, and a loose threshold takes
+    a seventh of that map for road. The stroke is nearly pure red, so asking
+    for a large margin over BOTH other channels and a low green separates it
+    from sandstone without touching the line itself.
+    """
     r, g, b = a[:, :, 0], a[:, :, 1], a[:, :, 2]
-    return (r - np.maximum(g, b) > 90) & (r > 160)
+    return (r - np.maximum(g, b) > 105) & (r > 165) & (g < 130)
 
 
 def green_mask(a):
     """The author's rings: a neon green no foliage on these maps reaches."""
     r, g, b = a[:, :, 0], a[:, :, 1], a[:, :, 2]
-    return (g > 170) & (b < 45) & (g - r > 70)
+    return (g > 150) & (b < 75) & (g - r > 60) & (g - b > 60)
 
 
 def component(mask, seed):
@@ -160,10 +190,11 @@ def main():
     if mid not in data:
         raise SystemExit(f"no such map: {mid} (have {', '.join(data)})")
 
-    pic = Image.open(src).convert("RGB")
+    pic, k = to_board(Image.open(src).convert("RGB"))
     # work on the board's grid: the router is built for it, and a pixel of
     # error at 960 wide is nothing on a road forty wide
-    a = np.asarray(pic.resize((W, H), Image.LANCZOS), dtype=np.int16)
+    a = np.asarray(pic, dtype=np.int16)
+    print(f"{mid}: markup {os.path.basename(src)} -> board at {k:.3f} px per unit")
 
     # --- the road ----------------------------------------------------------
     red = red_mask(a)
@@ -201,7 +232,7 @@ def main():
 
     # --- overlay on the author's picture, so the two can be compared ---------
     os.makedirs(OUT, exist_ok=True)
-    over = pic.resize((W, H), Image.LANCZOS)
+    over = pic.copy()
     d = ImageDraw.Draw(over)
     d.line([tuple(p) for p in keep], fill=(255, 255, 255), width=3)
     for x, y, _ in pads:
