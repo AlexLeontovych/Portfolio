@@ -11,6 +11,11 @@ on both, and this script takes it literally:
     from its left end to its right end — the same centreline router the
     tracer uses, now on a band the author drew rather than one guessed from
     the sand's colour;
+  * the marks are found by DIFFERENCE against the map they were drawn over,
+    which is in this repository. A colour key works until the map is painted
+    in the colour of the pen, and the forge is lava from edge to edge; the
+    tightest red key still called a ninth of it road. Against the original
+    the lava cannot be a mark, because it did not change;
   * each green ring becomes the centre of the ellipse fitted through it —
     fitted, not averaged, so a ring half-hidden under a tower still yields
     its true centre.
@@ -36,10 +41,14 @@ import json
 import os
 import sys
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import td_trace_road as tr                      # noqa: E402
+
+#: how far a pixel has to move from the map underneath to count as a mark;
+#: the two images have been through a lossy encoder, so it cannot be zero
+REPAINT = 70
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ART = os.path.join(ROOT, "art-src", "td")
@@ -67,6 +76,79 @@ def to_board(pic):
     return pic.crop(box).resize((W, H), Image.LANCZOS), k
 
 
+def changed(pic, under):
+    """
+    Pixels the author put there, by comparing with the map underneath.
+
+    The two images have been through a lossy encoder and differ by a pixel
+    or two in size, so every hard edge on the map — and the forge is lava
+    against black rock — lands slightly off and differences like a brush
+    stroke. Blurring both first fixes that but costs the stroke its
+    contrast wherever it runs over ground of its own colour, which is most
+    of the canyon. So the comparison is made against the map shifted a
+    little in each direction, and a pixel counts as painted only if it
+    differs from ALL of them: a misplaced edge matches one of the shifts,
+    a stroke matches none.
+    """
+    if under is None:
+        return np.ones((H, W), dtype=bool)
+    a = np.asarray(pic, dtype=np.int16)
+    b = np.asarray(under, dtype=np.int16)
+    worst = np.full((H, W), 1 << 20, dtype=np.int32)
+    for dy in (-2, -1, 0, 1, 2):
+        for dx in (-2, -1, 0, 1, 2):
+            sh = np.roll(np.roll(b, dy, axis=0), dx, axis=1)
+            worst = np.minimum(worst, np.abs(a - sh).sum(axis=2))
+    return worst > REPAINT
+
+
+def stitch(mask, reach=240, floor=700):
+    """
+    Join the pieces of a stroke that was drawn as one.
+
+    A red line over red lava barely differs from it, so the forge's road
+    arrives in pieces with the crossings missing. The pieces are still one
+    stroke, so the substantial ones are linked back up nearest-first, exactly
+    as far as `reach` allows and no further — a gap that big is a lift of the
+    pen, a bigger one is a second road.
+    """
+    left = mask.copy()
+    pieces = []
+    while left.any():
+        ys, xs = np.nonzero(left)
+        c = component(left, (ys[0], xs[0]))
+        left &= ~c
+        if c.sum() >= floor:
+            pieces.append(c)
+    if len(pieces) < 2:
+        return mask
+
+    pts = [np.column_stack(np.nonzero(p)[::-1]) for p in pieces]     # (x, y)
+    pts = [p[:: max(1, len(p) // 1500)] for p in pts]
+    out = mask.copy()
+    joined = {0}
+    canvas = Image.fromarray(out.astype(np.uint8) * 255)
+    draw = ImageDraw.Draw(canvas)
+    while len(joined) < len(pieces):
+        best = None
+        for i in joined:
+            for j in range(len(pieces)):
+                if j in joined:
+                    continue
+                d = np.hypot(pts[i][:, None, 0] - pts[j][None, :, 0],
+                             pts[i][:, None, 1] - pts[j][None, :, 1])
+                k, m = np.unravel_index(np.argmin(d), d.shape)
+                if best is None or d[k, m] < best[0]:
+                    best = (float(d[k, m]), j, tuple(pts[i][k]), tuple(pts[j][m]))
+        if best is None or best[0] > reach:
+            break
+        _, j, p, q = best
+        draw.line([p, q], fill=255, width=9)
+        joined.add(j)
+        print(f"   stitched a {best[0]:.0f}px gap at {p}")
+    return np.asarray(canvas) > 127
+
+
 def red_mask(a):
     """
     The author's stroke: a red far beyond anything the maps are painted in.
@@ -77,13 +159,13 @@ def red_mask(a):
     from sandstone without touching the line itself.
     """
     r, g, b = a[:, :, 0], a[:, :, 1], a[:, :, 2]
-    return (r - np.maximum(g, b) > 105) & (r > 165) & (g < 130)
+    return (r - g > 35) & (r - b > 35) & (r > 140)
 
 
 def green_mask(a):
     """The author's rings: a neon green no foliage on these maps reaches."""
     r, g, b = a[:, :, 0], a[:, :, 1], a[:, :, 2]
-    return (g > 150) & (b < 75) & (g - r > 60) & (g - b > 60)
+    return (g - r > 40) & (g - b > 40) & (g > 120)
 
 
 def component(mask, seed):
@@ -180,6 +262,88 @@ def rings(mask):
     return out
 
 
+def far_from(mask, seed):
+    """Distance through the stroke from one pixel, and the furthest reached."""
+    dist = np.full((H, W), -1, dtype=np.int32)
+    dist[seed[1], seed[0]] = 0
+    front = np.zeros((H, W), dtype=bool)
+    front[seed[1], seed[0]] = True
+    step = 0
+    while front.any():
+        step += 1
+        nxt = _dilate(front, 1) & mask & (dist < 0)
+        dist[nxt] = step
+        front = nxt
+    ys, xs = np.nonzero(dist >= 0)
+    i = int(np.argmax(dist[ys, xs]))
+    return (int(xs[i]), int(ys[i])), dist
+
+
+#: how close to the board's edge a stroke has to reach to be a way in or out
+EDGE = 55
+
+
+def ends(mask):
+    """
+    Where the road enters the board and where it leaves.
+
+    Taking the leftmost pixel and then the one furthest away in a straight
+    line is only right for a road that runs left to right; the forge's is a
+    serpentine, and that rule walked half of it and stranded four of its
+    twelve pads. Taking the two points furthest apart ALONG the stroke is
+    better but lands on whichever spur is longest — an arrowhead, or the
+    branch to the ice cave on the glacier.
+
+    What is actually true of a road is that it comes in at one edge of the
+    board and goes out at another. So the candidates are the places the
+    stroke touches an edge, and the answer is whichever two of those are
+    furthest apart along it. Everything in between, arrows included, is
+    something the road passes.
+    """
+    touch = np.zeros((H, W), dtype=bool)
+    touch[:EDGE, :] = touch[-EDGE:, :] = True
+    touch[:, :EDGE] = touch[:, -EDGE:] = True
+    touch &= mask
+
+    heads = []
+    left = touch.copy()
+    while left.any():
+        ys, xs = np.nonzero(left)
+        c = component(left, (ys[0], xs[0])) & touch
+        left &= ~c
+        cy, cx = np.nonzero(c)
+        if cx.size < 12:
+            continue
+        i = int(np.argmax((cx - W / 2) ** 2 + (cy - H / 2) ** 2))   # the outermost
+        heads.append((int(cx[i]), int(cy[i])))
+
+    if len(heads) < 2:
+        a, _ = far_from(mask, tuple(np.argwhere(mask)[0][::-1]))
+        b, _ = far_from(mask, a)
+        return a, b
+
+    best = None
+    for i, h in enumerate(heads):
+        _, dist = far_from(mask, h)
+        for j, k in enumerate(heads):
+            if j <= i:
+                continue
+            d = int(dist[k[1], k[0]])
+            if d >= 0 and (best is None or d > best[0]):
+                best = (d, h, k)
+    if best is None:
+        a, _ = far_from(mask, heads[0])
+        b, _ = far_from(mask, a)
+        return a, b
+    print(f"   {len(heads)} ways off the board; the road runs "
+          f"{best[1]} to {best[2]}")
+    return best[1], best[2]
+
+
+def _dilate(m, r):
+    return tr._dilate(m, r)
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
@@ -191,26 +355,30 @@ def main():
         raise SystemExit(f"no such map: {mid} (have {', '.join(data)})")
 
     pic, k = to_board(Image.open(src).convert("RGB"))
+    under = os.path.join(ART, "maps", f"{mid}.webp")
+    orig = (Image.open(under).convert("RGB").resize((W, H), Image.LANCZOS)
+            if os.path.exists(under) else None)
     # work on the board's grid: the router is built for it, and a pixel of
     # error at 960 wide is nothing on a road forty wide
     a = np.asarray(pic, dtype=np.int16)
-    print(f"{mid}: markup {os.path.basename(src)} -> board at {k:.3f} px per unit")
+    fresh = changed(pic, orig)
+    print(f"{mid}: markup {os.path.basename(src)} -> board at {k:.3f} px per unit, "
+          f"{fresh.mean() * 100:.1f}% of it repainted")
 
     # --- the road ----------------------------------------------------------
-    red = red_mask(a)
+    red = stitch(red_mask(a) & fresh)
     if not red.any():
         raise SystemExit("no red stroke found")
     # the stroke is the biggest red thing on the map by far; the rest is
     # flowers, and one of them may well sit further left than the entrance
     road = biggest(red)
     road = ~tr._dilate(~tr._dilate(road, 2), 2)          # close pen gaps
-    ys, xs = np.nonzero(road)
-    start = (int(ys[np.argmin(xs)]), int(np.min(xs)))
-    # the far end is whichever road pixel is furthest along from the start
-    i = np.argmax((xs - start[1]) ** 2 + (ys - start[0]) ** 2)
-    end = (int(xs[i]), int(ys[i]))
+    start, end = ends(road)
+    # left to right where the road allows it, so levels read the same way
+    if start[0] > end[0]:
+        start, end = end, start
     dep = tr.depth(road)
-    pixels = tr.route(road, dep, (start[1], start[0]), end)
+    pixels = tr.route(road, dep, start, end)
     pts = tr.smooth(pixels)
     keep = [tuple(pts[0])]
     for p in pts[1:-1]:
@@ -220,7 +388,7 @@ def main():
     data[mid]["road"] = [[round(float(x)), round(float(y))] for x, y in keep]
 
     # --- the pads ----------------------------------------------------------
-    pads = rings(green_mask(a))
+    pads = rings(green_mask(a) & fresh)
     pads.sort(key=lambda p: (p[1] // 90, p[0]))       # read like text
     data[mid]["plots"] = [[round(x), round(y)] for x, y, _ in pads]
 
