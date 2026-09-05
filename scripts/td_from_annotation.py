@@ -11,6 +11,10 @@ on both, and this script takes it literally:
     from its left end to its right end — the same centreline router the
     tracer uses, now on a band the author drew rather than one guessed from
     the sand's colour;
+  * a gap in the stroke is closed along the road underneath it. Joining the
+    pieces with a straight line is what put the forge's creeps through the
+    lava: the two ends of the gap sit either side of a bend, and the short
+    way between them is not the way the road goes;
   * the marks are found by DIFFERENCE against the map they were drawn over,
     which is in this repository. A colour key works until the map is painted
     in the colour of the pen, and the forge is lava from edge to edge; the
@@ -49,6 +53,8 @@ import td_trace_road as tr                      # noqa: E402
 #: how far a pixel has to move from the map underneath to count as a mark;
 #: the two images have been through a lossy encoder, so it cannot be zero
 REPAINT = 70
+#: how close to the road's own colours a pixel has to be to be walkable
+GROUND_TOL = 34
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ART = os.path.join(ROOT, "art-src", "td")
@@ -102,7 +108,69 @@ def changed(pic, under):
     return worst > REPAINT
 
 
-def stitch(mask, reach=240, floor=700):
+def ground_mask(pic, under, mask):
+    """
+    What the road is made of here, learned from under the author's own stroke.
+
+    The stroke lies on the road, so the map's colours beneath it are the
+    road's colours — no threshold to guess and nothing to tune per map. Two
+    things keep that honest. Only the middle of the stroke is sampled: its
+    edges overhang the kerb and the rock beside it, and sampling those called
+    four fifths of the forge walkable, lava included. And only the ground the
+    stroke can actually be walked to is kept, so sand of the same colour on
+    the far side of a lava river is not a way across it.
+    """
+    a = np.asarray(under if under is not None else pic, dtype=np.int16)
+    core = ~tr._dilate(~tr._dilate(mask, 3), 3)
+    ys, xs = np.nonzero(core if core.any() else mask)
+    if not xs.size:
+        return np.zeros((H, W), dtype=bool)
+    keys = a[ys, xs]
+    keys = keys[np.argsort(keys.sum(axis=1))]
+    keys = keys[:: max(1, len(keys) // 24)][:24]
+    d = np.full((H, W), 1 << 20, dtype=np.int32)
+    for k in keys:
+        d = np.minimum(d, np.abs(a - k).sum(axis=2))
+    near = close(d < GROUND_TOL, 2)
+
+    seed = near & mask
+    while True:
+        grown = tr._dilate(seed, 2) & near
+        if grown.sum() == seed.sum():
+            return grown
+        seed = grown
+
+
+def close(m, r):
+    return ~tr._dilate(~tr._dilate(m, r), r)
+
+
+def walk(ground, p, q):
+    """
+    The way from p to q along the ground, as a mask of the path.
+
+    None when there is no way: the router will always return something, so
+    what it returns has to be checked against the ground it was supposed to
+    stay on. On the forge the two halves of the stroke sit either side of a
+    cliff with a mine cart on it and no road between them at all, and a path
+    invented across that is exactly what marched the creeps through the lava.
+    """
+    patch = ground.copy()
+    for pt in (p, q):
+        patch[max(0, pt[1] - 4):pt[1] + 5, max(0, pt[0] - 4):pt[0] + 5] = True
+    pixels = tr.route(patch, tr.depth(patch), p, q)
+    if not len(pixels):
+        return None
+    on = sum(1 for x, y in pixels
+             if 0 <= int(y) < H and 0 <= int(x) < W and ground[int(y), int(x)])
+    if on < len(pixels) * 0.9:
+        return None
+    line = Image.new("1", (W, H), 0)
+    ImageDraw.Draw(line).line([tuple(map(int, v)) for v in pixels], fill=1, width=9)
+    return np.asarray(line) > 0
+
+
+def stitch(mask, ground=None, reach=240, floor=700):
     """
     Join the pieces of a stroke that was drawn as one.
 
@@ -143,9 +211,16 @@ def stitch(mask, reach=240, floor=700):
         if best is None or best[0] > reach:
             break
         _, j, p, q = best
-        draw.line([p, q], fill=255, width=9)
+        path = walk(ground, p, q) if ground is not None else None
+        if path is None:
+            print(f"   left a {best[0]:.0f}px gap at {p} alone: no road between "
+                  f"those two ends")
+            joined.add(j)          # nothing to join it by; stop considering it
+            continue
+        canvas = Image.fromarray(((np.asarray(canvas) > 127) | path).astype(np.uint8) * 255)
+        draw = ImageDraw.Draw(canvas)
         joined.add(j)
-        print(f"   stitched a {best[0]:.0f}px gap at {p}")
+        print(f"   stitched a {best[0]:.0f}px gap at {p} along the road")
     return np.asarray(canvas) > 127
 
 
@@ -366,7 +441,8 @@ def main():
           f"{fresh.mean() * 100:.1f}% of it repainted")
 
     # --- the road ----------------------------------------------------------
-    red = stitch(red_mask(a) & fresh)
+    marks = red_mask(a) & fresh
+    red = stitch(marks, ground_mask(pic, orig, biggest(marks)))
     if not red.any():
         raise SystemExit("no red stroke found")
     # the stroke is the biggest red thing on the map by far; the rest is

@@ -52,6 +52,10 @@ FRINGE = 42
 #: the checker squares meet in a blurred seam that is neither tone; the fill
 #: has to step over it or it never leaves the first square
 BRIDGE = 2
+#: how wide a strip at a cell's edge counts as "came in from next door"
+EDGE_BAND = 4
+#: alpha above which a pixel is part of a shape rather than its halo
+SOLID = 24
 
 
 def backdrop_tones(a):
@@ -72,16 +76,33 @@ def backdrop_tones(a):
     return picked
 
 
+def _shift(m, dy, dx):
+    """m moved by (dy, dx), with nothing wrapping round the edges."""
+    out = np.zeros_like(m)
+    h, w = m.shape
+    ys, yd = (slice(max(0, -dy), h - max(0, dy)), slice(max(0, dy), h - max(0, -dy)))
+    xs, xd = (slice(max(0, -dx), w - max(0, dx)), slice(max(0, dx), w - max(0, -dx)))
+    out[yd, xd] = m[ys, xs]
+    return out
+
+
 def _dilate(m, r):
-    """Grow by a square of radius r. Separable, so 4r shifts and not 4r^2."""
+    """
+    Grow by a square of radius r. Separable, so 4r shifts and not 4r^2.
+
+    The shift does NOT wrap. Written with np.roll it did, and the left edge
+    of a cell was therefore a neighbour of its right edge: a flash sitting at
+    x=0 counted as touching the tower at x=255, the flood fill walked round
+    the back of the image, and every intruder came out "part of the tower".
+    """
     out = m.copy()
     for d in range(-r, r + 1):
         if d:
-            out |= np.roll(m, d, axis=0)
+            out |= _shift(m, d, 0)
     m2 = out.copy()
     for d in range(-r, r + 1):
         if d:
-            out |= np.roll(m2, d, axis=1)
+            out |= _shift(m2, 0, d)
     return out
 
 
@@ -162,10 +183,18 @@ def checker(a):
 CELL = 256      # set from the manifest at startup
 
 
-def _reconstruct(seed, within):
-    """Grow seed through `within` until nothing more is reached."""
+def _reconstruct(seed, within, step=4):
+    """
+    Grow seed through `within` until nothing more is reached.
+
+    `step` is how far it reaches each round. Four is fast and fine when the
+    question is "what is this shape", but it also steps over a gap of up to
+    four pixels — and the flash a neighbouring frame leaves behind stops two
+    pixels short of the tower. Deciding what is CONNECTED to what has to walk
+    one pixel at a time or it joins things that are merely close.
+    """
     while True:
-        grown = _dilate(seed, 4) & within
+        grown = _dilate(seed, step) & within
         if grown.sum() == seed.sum():
             return grown
         seed = grown
@@ -177,39 +206,55 @@ def drop_stragglers(keep, neutral, cell=None):
 
     Two kinds of intruder. Grey litter: walled-in checker patches solid enough
     to survive the opening. And the neighbours: the generator did not keep
-    every tower inside its cell, so the top of the crystal in the row below
-    pokes up into this one, and a frame cut along the grid then shows a
-    second tower at its foot.
+    every tower's muzzle flash inside its cell, so the frame next door leaves
+    a piece of its flash in this one — which is why a second texture appeared
+    beside a tower only while it was firing.
 
-    Connectivity settles both. A tower always fills the bottom middle of its
-    cell, so whatever can be walked to from there is the tower. Of the rest,
-    anything grey goes, and anything touching the cell's border goes — that
-    is where a neighbour comes in from. Coloured sparks floating clear of
-    both the tower and the border are the only thing left, and they stay.
+    Connectivity settles both, and it is done one cell at a time. Trying it on
+    the whole sheet with a thin wall drawn between the cells did not work: the
+    fill grows in steps of four pixels and simply stepped over the wall, so
+    every tower claimed its neighbours and nothing was ever dropped. Inside a
+    single cell there is nothing to step over.
+
+    A tower fills the bottom middle of its cell, so what can be walked to from
+    there is the tower. Of the rest, anything grey goes, and anything reaching
+    the cell's edge goes — that is where a neighbour comes in from. Coloured
+    sparks floating clear of both stay.
+
+    Connectivity is judged on the SOLID pixels only. Every shape here carries
+    a faint halo of antialiasing, and at full transparency those halos touch:
+    the flash next door and the tower are two separate things joined by a
+    thread one alpha step above nothing, and following that thread made the
+    tower swallow the intruder and the rule remove nothing at all.
+
+    Returns the mask of what to erase, halo included.
     """
     cell = cell or CELL
     h, w = keep.shape
-    base = np.zeros_like(keep)
-    rim = np.zeros_like(keep)
-    for cy in range(0, h, cell):
-        for cx in range(0, w, cell):
-            y0, y1 = cy + int(cell * 0.58), cy + int(cell * 0.88)
-            x0, x1 = cx + int(cell * 0.34), cx + int(cell * 0.66)
-            base[y0:y1, x0:x1] = True
-            rim[cy, cx:cx + cell] = rim[cy + cell - 1, cx:cx + cell] = True
-            rim[cy:cy + cell, cx] = rim[cy:cy + cell, cx + cell - 1] = True
+    out = np.zeros_like(keep)
+    for cy in range(0, h - cell + 1, cell):
+        for cx in range(0, w - cell + 1, cell):
+            box = keep[cy:cy + cell, cx:cx + cell]
+            if not box.any():
+                continue
+            grey = neutral[cy:cy + cell, cx:cx + cell]
 
-    # the fill must not cross a cell border, or a tower would claim its
-    # neighbour's overflow as its own
-    walls = np.zeros_like(keep)
-    walls[::cell, :] = True
-    walls[:, ::cell] = True
-    inside = keep & ~walls
+            base = np.zeros_like(box)
+            base[int(cell * 0.58):int(cell * 0.88), int(cell * 0.34):int(cell * 0.66)] = True
+            tower = _reconstruct(base & box, box, step=1)
 
-    tower = _reconstruct(base & inside, inside)
-    rest = inside & ~tower
-    intruder = _reconstruct(rim & rest, rest)
-    return keep & ~walls & ~intruder & ~(rest & neutral)
+            rest = box & ~tower
+            # a band at the edge rather than the edge itself: a neighbour's
+            # flash may stop a pixel or two short of the boundary, and asking
+            # for an exact touch missed every one of them
+            rim = np.zeros_like(box)
+            rim[:EDGE_BAND, :] = rim[-EDGE_BAND:, :] = True
+            rim[:, :EDGE_BAND] = rim[:, -EDGE_BAND:] = True
+            intruder = _reconstruct(rim & rest, rest, step=1)
+
+            out[cy:cy + cell, cx:cx + cell] = intruder | (rest & grey)
+    # take each intruder's own halo with it, or a ghost outline is left behind
+    return _dilate(out, 2)
 
 
 #: where a tower's base sits in its normalised cell, from the cell's top
@@ -312,7 +357,7 @@ def cut(path, cell=None):
     rgba, bands = normalise(rgba, cell or CELL)
     neut = (rgba[:, :, :3].max(axis=2).astype(np.int16)
             - rgba[:, :, :3].min(axis=2)) <= NEUTRAL
-    rgba[:, :, 3] *= drop_stragglers(rgba[:, :, 3] > 0, neut, cell)
+    rgba[:, :, 3] *= ~drop_stragglers(rgba[:, :, 3] > SOLID, neut, cell)
     print(f"      rows at {', '.join(f'{a}-{b}' for a, b in bands)}")
     return Image.fromarray(rgba, "RGBA")
 
