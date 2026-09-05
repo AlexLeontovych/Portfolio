@@ -42,7 +42,19 @@ than drawing a board of its own.
 
 The creeps are the same LuizMelo sheets the platformer uses, credited above.
 
-## UI
+## UI — IRONWOOD KEEP tower defense
+
+**Tiny Swords** — [Pixel Frog](https://pixelfrog-assets.itch.io/tiny-swords)
+Licence: free to use in commercial and non-commercial games; the assets may not be redistributed
+or resold, modified or not.
+
+Used for the game's interface: the parchment panels, the chips, the buttons and the icons. The
+pack itself is therefore not in this repository. `scripts/td_ui.py` reads a local copy, takes only
+the pieces the interface draws, assembles each one's nine parts into a nine-slice image and scales
+it to the size it is drawn at — `public/games/td/ui/`, 78 kB for the lot. That is a game carrying
+its skin rather than a pack being republished.
+
+## UI — EMBERWOOD platformer
 
 The platformer's interface skin (`public/games/platformer/ui/`) is generated for this project —
 every panel, button, chip, bar and icon is built from the six colours sampled out of the forest

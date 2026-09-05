@@ -1,8 +1,109 @@
 /*
- * Chrome for the tower-defense overlay. Warm wood and parchment rather than
- * the site's neon: the board underneath is a sunlit map, and the site palette
- * fought it.
+ * Chrome for the tower-defense overlay.
+ *
+ * Every panel, button and chip is a nine-slice off the Tiny Swords UI kit.
+ * scripts/td_ui.py cuts the pieces to the size they are drawn at and writes
+ * ui.ts with each one's URL and slice numbers; the component spreads those
+ * onto the overlay, so nothing here knows a path or a pixel count. `fill` on
+ * every slice is what paints the middle — without it a nine-slice is a frame
+ * around a hole.
+ *
+ * Border widths match each piece's own slice, so a corner is drawn at the
+ * size it was cut and never resampled.
  */
+
+.panel,
+.menu,
+.card,
+.maxed {
+  border-style: solid;
+  border-width: var(--tdui-paper-border);
+  border-image-source: var(--tdui-paper);
+  border-image-slice: var(--tdui-paper-slice) fill;
+  border-image-repeat: stretch;
+}
+
+.stat,
+.levelTag,
+.toast {
+  border-style: solid;
+  border-width: var(--tdui-chip-border);
+  border-image-source: var(--tdui-chip);
+  border-image-slice: var(--tdui-chip-slice) fill;
+  border-image-repeat: stretch;
+}
+
+.buildBtn,
+.levelCard,
+.diff,
+.ghost {
+  border-style: solid;
+  border-width: var(--tdui-button-border);
+  border-image-source: var(--tdui-button);
+  border-image-slice: var(--tdui-button-slice) fill;
+  border-image-repeat: stretch;
+}
+
+.buildBtn:active:not(:disabled),
+.levelCard:active:not(:disabled),
+.diff:active,
+.ghost:active,
+.levelSel,
+.diffSel {
+  border-width: var(--tdui-button-down-border);
+  border-image-source: var(--tdui-button-down);
+  border-image-slice: var(--tdui-button-down-slice) fill;
+}
+
+.play,
+.callWave {
+  border-style: solid;
+  border-width: var(--tdui-big-border);
+  border-image-source: var(--tdui-big);
+  border-image-slice: var(--tdui-big-slice) fill;
+  border-image-repeat: stretch;
+}
+
+.play:active,
+.callWave:active {
+  border-width: var(--tdui-big-down-border);
+  border-image-source: var(--tdui-big-down);
+  border-image-slice: var(--tdui-big-down-slice) fill;
+}
+
+.close,
+
+.close,
+.tool {
+  border: none;
+  background: var(--tdui-round) center / 100% 100% no-repeat;
+}
+
+.close:active,
+.tool:active {
+  background-image: var(--tdui-round-down);
+}
+
+/* the kit's own icons, in place of the glyphs that stood in for them */
+.icon {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: -0.25em;
+  background: center / contain no-repeat;
+}
+.icon[data-icon="gold"] { background-image: var(--tdui-icon-gold); }
+.icon[data-icon="lives"] { background-image: var(--tdui-icon-lives); }
+.icon[data-icon="wave"] { background-image: var(--tdui-icon-wave); }
+.icon[data-icon="up"] { background-image: var(--tdui-icon-up); }
+.icon[data-icon="sell"] { background-image: var(--tdui-icon-sell); }
+.icon[data-icon="gear"] { background-image: var(--tdui-icon-gear); }
+.icon[data-icon="info"] { background-image: var(--tdui-icon-info); }
+
+/*
+ * (original chrome below, now only for colour and layout)
+ */
+
 
 .overlay {
   --wood: #4a2f1d;
@@ -42,14 +143,8 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 3px solid var(--wood-hi);
-  border-radius: 10px;
-  background: var(--wood);
   color: var(--parch);
   cursor: pointer;
-}
-.close:hover {
-  background: var(--wood-hi);
 }
 
 /* ---------- level select ---------- */
@@ -110,9 +205,6 @@
   display: grid;
   gap: 0.15rem;
   padding: 0.7rem 0.6rem 0.8rem;
-  border: 3px solid var(--wood-hi);
-  border-radius: 12px;
-  background: rgba(58, 36, 19, 0.9);
   color: var(--parch);
   cursor: pointer;
   text-align: center;
@@ -122,7 +214,6 @@
   cursor: not-allowed;
 }
 .levelSel {
-  border-color: var(--gold);
   box-shadow: 0 0 0 2px rgba(255, 212, 94, 0.3), 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 .levelNo {
@@ -164,9 +255,6 @@
   display: grid;
   gap: 0.1rem;
   padding: 0.5rem 0.9rem;
-  border: 3px solid var(--wood-hi);
-  border-radius: 10px;
-  background: rgba(58, 36, 19, 0.9);
   color: var(--parch);
   cursor: pointer;
 }
@@ -186,15 +274,11 @@
 
 .play {
   padding: 0.8rem 1.4rem;
-  border: 3px solid #8a5a24;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #e0a53c, #b97a22);
   color: #2a1a05;
   font-family: var(--font-pixel);
   font-size: 0.62rem;
   letter-spacing: 0.06em;
   cursor: pointer;
-  box-shadow: 0 4px 0 #7d4f16;
 }
 .play:hover {
   filter: brightness(1.08);
@@ -232,9 +316,6 @@
 }
 .stat {
   padding: 0.3rem 0.7rem;
-  border: 3px solid var(--wood-hi);
-  border-radius: 999px;
-  background: rgba(35, 22, 11, 0.9);
   color: var(--parch);
   font-family: var(--font-pixel);
   font-size: 0.6rem;
@@ -264,15 +345,9 @@
 .tool {
   width: 44px;
   height: 40px;
-  border: 3px solid var(--wood-hi);
-  border-radius: 10px;
-  background: var(--wood);
   color: var(--parch);
   font-size: 0.8rem;
   cursor: pointer;
-}
-.tool:hover {
-  background: var(--wood-hi);
 }
 
 .callWave {
@@ -283,12 +358,8 @@
   display: grid;
   gap: 0.1rem;
   padding: 0.5rem 1rem;
-  border: 3px solid #8a5a24;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #e0a53c, #b97a22);
   color: #2a1a05;
   cursor: pointer;
-  box-shadow: 0 4px 0 #7d4f16;
   animation: nudge 2.4s ease-in-out infinite;
 }
 .callTop {
@@ -311,9 +382,6 @@
   transform: translateX(-50%);
   z-index: 6;
   padding: 0.5rem 1.2rem;
-  border: 3px solid var(--wood-hi);
-  border-radius: 12px;
-  background: rgba(35, 22, 11, 0.9);
   color: var(--parch);
   font-family: var(--font-pixel);
   font-size: 0.66rem;
@@ -329,14 +397,11 @@
   transform: translateX(-50%);
   z-index: 7;
   padding: 0.55rem 0.7rem 0.65rem;
-  border: 3px solid var(--wood-hi);
-  border-radius: 14px;
-  background: rgba(35, 22, 11, 0.94);
   text-align: center;
 }
 .menuTitle {
   margin: 0 0 0.45rem;
-  color: var(--gold);
+  color: var(--ink);
   font-family: var(--font-pixel);
   font-size: 0.5rem;
   letter-spacing: 0.08em;
@@ -351,9 +416,6 @@
   gap: 0.12rem;
   width: 88px;
   padding: 0.45rem 0.3rem 0.5rem;
-  border: 3px solid var(--wood-hi);
-  border-radius: 10px;
-  background: rgba(74, 47, 29, 0.95);
   color: var(--parch);
   cursor: pointer;
 }
@@ -401,14 +463,11 @@
 .card {
   width: min(430px, 100%);
   padding: 1.4rem 1.3rem;
-  border: 4px solid var(--wood-hi);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #3a2413, #241609);
   text-align: center;
 }
 .cardTitle {
   margin: 0 0 0.5rem;
-  color: var(--parch);
+  color: var(--ink);
   font-family: var(--font-pixel);
   font-size: 0.9rem;
   text-shadow: 0 3px 0 var(--ink);
@@ -421,7 +480,7 @@
 }
 .cardBody {
   margin: 0 0 1rem;
-  color: #d8c49a;
+  color: var(--ink);
   font-family: var(--font-mono);
   font-size: 0.88rem;
 }

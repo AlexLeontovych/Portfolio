@@ -8,6 +8,7 @@ import { LEVELS } from "./levels";
 import { TdEngine, type Hud, type Phase } from "./engine";
 import { DIFFICULTIES, TOWERS, type DifficultyId, type TowerId } from "./units";
 import styles from "./td.module.css";
+import { UI_VARS } from "./ui";
 
 /**
  * IRONWOOD KEEP — the tower-defense overlay.
@@ -133,6 +134,7 @@ export default function Td() {
       ref={overlayRef}
       tabIndex={-1}
       className={styles.overlay}
+      style={UI_VARS as React.CSSProperties}
       role="dialog"
       aria-modal="true"
       aria-label="IRONWOOD KEEP"
@@ -188,7 +190,7 @@ export default function Td() {
               >
                 <span className={styles.diffName}>{t(`td.diff_${d}`)}</span>
                 <span className={styles.diffMeta}>
-                  ♥{DIFFICULTIES[d].lives} · ◉{DIFFICULTIES[d].gold}
+                  <i className={styles.icon} data-icon="lives" />{DIFFICULTIES[d].lives} · <i className={styles.icon} data-icon="gold" />{DIFFICULTIES[d].gold}
                 </span>
               </button>
             ))}
@@ -212,8 +214,8 @@ export default function Td() {
       {screen === "game" && hud && (
         <>
           <div className={styles.hud}>
-            <span className={styles.stat} data-kind="gold">◉ {hud.gold}</span>
-            <span className={styles.stat} data-kind="lives">♥ {hud.lives}</span>
+            <span className={styles.stat} data-kind="gold"><i className={styles.icon} data-icon="gold" /> {hud.gold}</span>
+            <span className={styles.stat} data-kind="lives"><i className={styles.icon} data-icon="lives" /> {hud.lives}</span>
             <span className={styles.stat}>
               {t("td.wave")} {hud.wave}/{hud.waves}
             </span>
@@ -241,7 +243,7 @@ export default function Td() {
             <button type="button" className={styles.callWave} onClick={() => engineRef.current?.callWave()}>
               <span className={styles.callTop}>{t("td.call")}</span>
               <span className={styles.callSub}>
-                {Math.ceil(hud.countdown)}s · +{hud.earlyBonus} ◉
+                {Math.ceil(hud.countdown)}s · +{hud.earlyBonus} <i className={styles.icon} data-icon="gold" />
               </span>
             </button>
           )}
@@ -271,7 +273,7 @@ export default function Td() {
                     >
                       <span className={styles.buildGlyph}>{TOWER_GLYPH[id]}</span>
                       <span className={styles.buildName}>{t(`td.tower_${id}`)}</span>
-                      <span className={styles.buildCost}>◉ {cost}</span>
+                      <span className={styles.buildCost}><i className={styles.icon} data-icon="gold" /> {cost}</span>
                     </button>
                   );
                 })}
@@ -290,17 +292,17 @@ export default function Td() {
                     disabled={hud!.gold < sel.tower.upgradeCost}
                     onClick={() => engineRef.current?.upgrade()}
                   >
-                    <span className={styles.buildGlyph}>▲</span>
+                    <i className={styles.icon} data-icon="up" />
                     <span className={styles.buildName}>{t("td.upgrade")}</span>
-                    <span className={styles.buildCost}>◉ {sel.tower.upgradeCost}</span>
+                    <span className={styles.buildCost}><i className={styles.icon} data-icon="gold" /> {sel.tower.upgradeCost}</span>
                   </button>
                 ) : (
                   <span className={styles.maxed}>{t("td.maxed")}</span>
                 )}
                 <button type="button" className={styles.buildBtn} onClick={() => engineRef.current?.sell()}>
-                  <span className={styles.buildGlyph}>✕</span>
+                  <i className={styles.icon} data-icon="sell" />
                   <span className={styles.buildName}>{t("td.sell")}</span>
-                  <span className={styles.buildCost}>+◉ {sel.tower.sellValue}</span>
+                  <span className={styles.buildCost}>+<i className={styles.icon} data-icon="gold" /> {sel.tower.sellValue}</span>
                 </button>
               </div>
             </>
