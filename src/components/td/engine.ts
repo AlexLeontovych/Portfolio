@@ -627,7 +627,7 @@ export class TdEngine {
   private spawnCreep(id: CreepId) {
     const def = CREEPS[id];
     const set = this.creepSets[def.sheet];
-    const hp = def.hp * DIFFICULTIES[this.diff].hp;
+    const hp = def.hp * DIFFICULTIES[this.diff].hp * (this.level.def.hp ?? 1);
     this.creeps.push({
       id, def, dist: -20 - Math.random() * 30,
       hp, maxHp: hp,

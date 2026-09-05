@@ -55,29 +55,29 @@ export const CREEPS: Record<CreepId, CreepDef> = {
     resist: 0, gold: 7, leak: 1, flying: false, scale: 1.15,
   },
   skeleton: {
-    name: "Skeleton", sheet: "enemies/skeleton", hp: 150, speed: 28, armour: 5,
+    name: "Skeleton", sheet: "enemies/skeleton", hp: 150, speed: 28, armour: 3,
     resist: 0, gold: 14, leak: 2, flying: false, scale: 1.2,
   },
   flyingEye: {
     name: "Flying Eye", sheet: "enemies/flying-eye", hp: 80, speed: 70, armour: 0,
-    resist: 0.3, gold: 11, leak: 1, flying: true, scale: 1.15,
+    resist: 0.25, gold: 11, leak: 1, flying: true, scale: 1.15,
   },
   eliteGoblin: {
-    name: "Goblin Raider", sheet: "enemies/goblin", hp: 130, speed: 78, armour: 2,
+    name: "Goblin Raider", sheet: "enemies/goblin", hp: 130, speed: 78, armour: 1,
     resist: 0, gold: 16, leak: 2, flying: false, scale: 1.3, tint: "#ff6a4d",
   },
   eliteMushroom: {
-    name: "Blight Mushroom", sheet: "enemies/mushroom", hp: 260, speed: 26, armour: 8,
-    resist: 0.2, gold: 22, leak: 2, flying: false, scale: 1.45, tint: "#8f5bff",
+    name: "Blight Mushroom", sheet: "enemies/mushroom", hp: 240, speed: 26, armour: 4,
+    resist: 0.15, gold: 22, leak: 2, flying: false, scale: 1.45, tint: "#8f5bff",
   },
   wraith: {
     name: "Wraith", sheet: "enemies/flying-eye", hp: 190, speed: 92, armour: 0,
-    resist: 0.6, gold: 26, leak: 3, flying: true, scale: 1.25, tint: "#5ee7c8",
+    resist: 0.4, gold: 26, leak: 3, flying: true, scale: 1.25, tint: "#5ee7c8",
     ignoresBlockers: true,
   },
   wizard: {
-    name: "Evil Wizard", sheet: "boss/wizard", hp: 2600, speed: 22, armour: 10,
-    resist: 0.35, gold: 220, leak: 12, flying: false, scale: 1.9, boss: true,
+    name: "Evil Wizard", sheet: "boss/wizard", hp: 2600, speed: 22, armour: 6,
+    resist: 0.3, gold: 220, leak: 12, flying: false, scale: 1.9, boss: true,
   },
 };
 
@@ -201,12 +201,23 @@ export const DIFFICULTIES: Record<DifficultyId, DifficultyDef> = {
 };
 
 /**
+ * The least of a hit that armour can leave, as a fraction.
+ *
+ * Flat armour is what makes a mage worth buying, but taken literally it does
+ * not blunt a fast weak tower, it switches it off: eight armour against the
+ * battery's six damage left a tenth of the shot, and the battery went from
+ * 21 damage per second per hundred gold to 2. Nothing about a level told the
+ * player that, so from the third map on it simply felt as though their
+ * towers had stopped working. A third of a shot always lands.
+ */
+const ARMOUR_FLOOR = 0.35;
+
+/**
  * Physical damage is reduced by a flat armour value, magic by a fraction —
- * the split is what makes both tower kinds worth owning. Armour can never
- * absorb a hit completely, or a heavily armoured creep would be immune to a
- * tower the player has already paid for.
+ * the split is what makes both tower kinds worth owning. Armour blunts a
+ * hit; it never switches a tower off.
  */
 export function applyDamage(raw: number, kind: DamageKind, c: CreepDef): number {
   if (kind === "magic") return raw * (1 - c.resist);
-  return Math.max(raw * 0.1, raw - c.armour);
+  return Math.max(raw * ARMOUR_FLOOR, raw - c.armour);
 }
