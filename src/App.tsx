@@ -16,6 +16,7 @@ import Flashlight from "./components/Flashlight";
 import FinishCelebration from "./components/FinishCelebration";
 import Arcade from "./components/arcade/Arcade";
 import PlatformerHost from "./components/platformer/PlatformerHost";
+import TdHost from "./components/td/TdHost";
 import PetProjects from "./components/PetProjects";
 
 export default function App() {
@@ -44,6 +45,7 @@ export default function App() {
       <Flashlight />
       <Arcade />
       <PlatformerHost />
+      <TdHost />
       <FinishCelebration />
     </>
   );

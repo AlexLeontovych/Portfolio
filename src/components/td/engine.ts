@@ -13,7 +13,7 @@
 
 import { Animator, loadAnimSet, type AnimSet } from "../platformer/sprites";
 import { BOARD, LEVELS, loadLevel, waveSize, type Level } from "./levels";
-import { headingAt, pointAt, type Point } from "./path";
+import { distanceToPath, headingAt, pointAt, type Point } from "./path";
 import {
   CREEPS, DIFFICULTIES, SELL_REFUND, TOWERS, applyDamage,
   type CreepDef, type CreepId, type DifficultyId, type TowerId,
@@ -148,18 +148,45 @@ interface Decor {
 /* -------------------------------- palette --------------------------------- */
 
 interface Palette {
+  /** darkest ground tone, the base the patches sit on */
   ground: string;
-  ground2: string;
+  /** lighter irregular patches scattered over it */
+  patch: string;
+  /** the walkable sand */
   road: string;
+  /** the band just inside the road edge */
+  roadEdge: string;
+  /** the dark outline that separates road from ground */
   rim: string;
+  pebble: string;
+  foliage: string;
+  foliageDark: string;
   accent: string;
 }
 
 const BIOMES: Record<"forest" | "cave" | "ember", Palette> = {
-  forest: { ground: "#2c645e", ground2: "#245450", road: "#b89a6a", rim: "#8a7047", accent: "#c6d831" },
-  cave: { ground: "#153c4a", ground2: "#102f3b", road: "#7e8ba0", rim: "#5a6577", accent: "#5ee7c8" },
-  ember: { ground: "#3d0f2c", ground2: "#310b24", road: "#a8703f", rim: "#7d4f2b", accent: "#ff6a3d" },
+  forest: {
+    ground: "#4a8a3c", patch: "#5aa347", road: "#e6d59b", roadEdge: "#d4bd80",
+    rim: "#3b6b30", pebble: "#c7ad76", foliage: "#3f7d34", foliageDark: "#2d5c26",
+    accent: "#c6d831",
+  },
+  cave: {
+    ground: "#7a5a3f", patch: "#8d6b4b", road: "#e2cfa4", roadEdge: "#cbb488",
+    rim: "#5b4230", pebble: "#b79a72", foliage: "#6b533c", foliageDark: "#4d3a2a",
+    accent: "#ffb347",
+  },
+  ember: {
+    ground: "#6d3a30", patch: "#824639", road: "#dcbb8e", roadEdge: "#c4a074",
+    rim: "#4e2721", pebble: "#a87c5c", foliage: "#5c2f2a", foliageDark: "#3f1f1c",
+    accent: "#ff6a3d",
+  },
 };
+
+/** Cheap deterministic noise, so the same board wobbles the same way twice. */
+function noise1(x: number, seed: number): number {
+  const n = Math.sin(x * 12.9898 + seed * 78.233) * 43758.5453;
+  return (n - Math.floor(n)) * 2 - 1;
+}
 
 export class TdEngine {
   private canvas: HTMLCanvasElement;
@@ -281,27 +308,103 @@ export class TdEngine {
   }
 
   /**
-   * Scatter trees and rocks off the road. Seeded by the level index so the
-   * scenery is part of the map rather than something that reshuffles on every
-   * restart.
+   * Dress the board.
+   *
+   * Scenery is CLUSTERED, not sprinkled: a handful of seed points, each grown
+   * into a thicket. Even scatter is what makes a hand-drawn map look
+   * procedural, and it also fills the middle of the board — exactly where the
+   * player needs clear ground to read the road and place towers. So clumps are
+   * pushed toward the far side of the build band and the edges.
    */
   private buildDecor(): Decor[] {
     let seed = 9781 + this.levelIdx * 4517;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
     const out: Decor[] = [];
-    const taken = (x: number, y: number) =>
-      this.level.slots.some((s) => Math.hypot(s.x - x, s.y - y) < 46);
-    for (let i = 0; i < 190; i++) {
-      const x = rnd() * BOARD.w;
-      const y = rnd() * BOARD.h;
-      const d = Math.min(
-        ...this.level.path.points.map((p) => Math.hypot(p.x - x, p.y - y)),
-      );
-      if (d < 62 || taken(x, y)) continue;
-      const r = rnd();
-      out.push({ x, y, kind: r < 0.42 ? "tree" : r < 0.72 ? "bush" : "rock", s: 0.7 + rnd() * 0.6 });
+    const blocked = (x: number, y: number) =>
+      distanceToPath(this.level.path, { x, y }) < 52 ||
+      this.level.slots.some((s) => Math.hypot(s.x - x, s.y - y) < 40);
+
+    for (let c = 0; c < 26; c++) {
+      let cx = 0;
+      let cy = 0;
+      let ok = false;
+      for (let tries = 0; tries < 40 && !ok; tries++) {
+        cx = rnd() * BOARD.w;
+        cy = rnd() * BOARD.h;
+        const edge = Math.min(cx, cy, BOARD.w - cx, BOARD.h - cy);
+        // favour the rim of the board and the deep pockets between road loops
+        if (distanceToPath(this.level.path, { x: cx, y: cy }) < 110 && edge > 80) continue;
+        ok = !blocked(cx, cy);
+      }
+      if (!ok) continue;
+      const n = 3 + Math.floor(rnd() * 6);
+      for (let i = 0; i < n; i++) {
+        const a = rnd() * Math.PI * 2;
+        const r = rnd() * 46;
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        if (x < 8 || y < 8 || x > BOARD.w - 8 || y > BOARD.h - 8 || blocked(x, y)) continue;
+        const k = rnd();
+        out.push({
+          x, y,
+          kind: k < 0.5 ? "tree" : k < 0.82 ? "bush" : "rock",
+          s: 0.65 + rnd() * 0.65,
+        });
+      }
     }
+    // painter's order: things lower on the board overlap things above them
+    out.sort((a, b) => a.y - b.y);
     return out;
+  }
+
+  /**
+   * The road as a filled shape rather than a stroked line.
+   *
+   * A stroke gives a perfectly even ribbon, which is the one thing these maps
+   * never look like. Sampling the centreline, smoothing the waypoint corners
+   * and offsetting each side by a half-width that wanders gives the ragged
+   * edge the style lives on — and it is the same shape every run, because the
+   * wander comes from a hash of the distance rather than a random number.
+   */
+  private roadOutline(halfW: number, amp: number, seed: number): Point[] {
+    const path = this.level.path;
+    const step = 8;
+    const mid: Point[] = [];
+    for (let d = -20; d <= path.length + 20; d += step) mid.push(pointAt(path, d));
+    // two smoothing passes round off the authored corners
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 1; i < mid.length - 1; i++) {
+        mid[i] = {
+          x: (mid[i - 1].x + mid[i].x * 2 + mid[i + 1].x) / 4,
+          y: (mid[i - 1].y + mid[i].y * 2 + mid[i + 1].y) / 4,
+        };
+      }
+    }
+    const left: Point[] = [];
+    const right: Point[] = [];
+    for (let i = 0; i < mid.length; i++) {
+      const a = mid[Math.max(0, i - 1)];
+      const b = mid[Math.min(mid.length - 1, i + 1)];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+      const wl = halfW + noise1(i * 0.38, seed) * amp;
+      const wr = halfW + noise1(i * 0.38, seed + 17) * amp;
+      left.push({ x: mid[i].x + nx * wl, y: mid[i].y + ny * wl });
+      right.push({ x: mid[i].x - nx * wr, y: mid[i].y - ny * wr });
+    }
+    return [...left, ...right.reverse()];
+  }
+
+  private fillPoly(ctx: CanvasRenderingContext2D, poly: Point[], colour: string) {
+    ctx.beginPath();
+    ctx.moveTo(poly[0].x, poly[0].y);
+    for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+    ctx.closePath();
+    ctx.fillStyle = colour;
+    ctx.fill();
   }
 
   /* ------------------------------ player input ----------------------------- */
@@ -567,7 +670,8 @@ export class TdEngine {
         continue;
       }
 
-      t.cooldown -= dt;
+      // clamp: an idle tower used to run its cooldown off to minus infinity
+      t.cooldown = Math.max(0, t.cooldown - dt);
       if (t.cooldown > 0) continue;
 
       // furthest along the road first: the closest to leaking is the threat
@@ -782,31 +886,76 @@ export class TdEngine {
     this.drawPuffs(ctx);
   }
 
+  /**
+   * Ground in layers: a dark base, irregular lighter patches over it, then
+   * pebbles. Three cheap passes, and the difference between "a game board"
+   * and "a flat green rectangle" is entirely in the second one.
+   */
   private drawGround(ctx: CanvasRenderingContext2D, pal: Palette) {
     ctx.fillStyle = pal.ground;
     ctx.fillRect(0, 0, BOARD.w, BOARD.h);
-    // a coarse checker keeps a flat fill from looking like an empty canvas
-    ctx.fillStyle = pal.ground2;
-    for (let y = 0; y < BOARD.h; y += 48) {
-      for (let x = ((y / 48) % 2) * 48; x < BOARD.w; x += 96) {
-        ctx.fillRect(x, y, 48, 48);
+
+    let seed = 4211 + this.levelIdx * 977;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+
+    // many small blobs, not a few huge ones: at this size they read as ground
+    // texture, where the first attempt read as green clouds
+    ctx.fillStyle = pal.patch;
+    ctx.globalAlpha = 0.55;
+    for (let i = 0; i < 120; i++) {
+      const cx = rnd() * BOARD.w;
+      const cy = rnd() * BOARD.h;
+      const r = 10 + rnd() * 22;
+      ctx.beginPath();
+      for (let b = 0; b < 4; b++) {
+        const a = (b / 4) * Math.PI * 2;
+        const rr = r * (0.6 + rnd() * 0.45);
+        ctx.moveTo(cx + Math.cos(a) * r * 0.35 + rr, cy + Math.sin(a) * r * 0.35);
+        ctx.arc(cx + Math.cos(a) * r * 0.35, cy + Math.sin(a) * r * 0.35, rr, 0, Math.PI * 2);
       }
+      ctx.fill();
     }
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = pal.pebble;
+    ctx.globalAlpha = 0.5;
+    for (let i = 0; i < 150; i++) {
+      const x = rnd() * BOARD.w;
+      const y = rnd() * BOARD.h;
+      const r = 1.4 + rnd() * 2.4;
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   private drawRoad(ctx: CanvasRenderingContext2D, pal: Palette) {
-    const pts = this.level.path.points;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.strokeStyle = pal.rim;
-    ctx.lineWidth = 52;
-    ctx.stroke();
-    ctx.strokeStyle = pal.road;
-    ctx.lineWidth = 42;
-    ctx.stroke();
+    const seed = this.levelIdx * 31 + 7;
+    // dark rim, then the shoulder, then the lighter track worn down the middle
+    this.fillPoly(ctx, this.roadOutline(35, 5, seed), pal.rim);
+    this.fillPoly(ctx, this.roadOutline(29, 4.5, seed), pal.roadEdge);
+    this.fillPoly(ctx, this.roadOutline(21, 3.5, seed + 5), pal.road);
+
+    // gravel along the track, thinning toward the middle
+    let s2 = 8123 + this.levelIdx * 613;
+    const rnd = () => ((s2 = (s2 * 1664525 + 1013904223) >>> 0) / 4294967296);
+    ctx.fillStyle = pal.pebble;
+    ctx.globalAlpha = 0.55;
+    const len = this.level.path.length;
+    for (let i = 0; i < 220; i++) {
+      const d = rnd() * len;
+      const p = pointAt(this.level.path, d);
+      const h = headingAt(this.level.path, d);
+      const off = (rnd() * 2 - 1) * 26;
+      const x = p.x - h.y * off;
+      const y = p.y + h.x * off;
+      const r = 1.2 + rnd() * 2;
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r * 0.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   private drawDecor(ctx: CanvasRenderingContext2D, pal: Palette) {
@@ -820,20 +969,29 @@ export class TdEngine {
       ctx.fill();
       if (d.kind === "tree") {
         ctx.fillStyle = "#5a3b28";
-        ctx.fillRect(-3, -8, 6, 12);
-        ctx.fillStyle = pal.accent;
+        ctx.fillRect(-3, -10, 6, 14);
+        ctx.fillStyle = pal.foliageDark;
         ctx.beginPath();
-        ctx.arc(0, -18, 14, 0, Math.PI * 2);
+        ctx.arc(-6, -18, 11, 0, Math.PI * 2);
+        ctx.arc(7, -16, 10, 0, Math.PI * 2);
+        ctx.arc(0, -26, 12, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "rgba(0,0,0,0.18)";
+        ctx.fillStyle = pal.foliage;
         ctx.beginPath();
-        ctx.arc(4, -14, 9, 0, Math.PI * 2);
+        ctx.arc(-4, -21, 9, 0, Math.PI * 2);
+        ctx.arc(4, -25, 8, 0, Math.PI * 2);
         ctx.fill();
       } else if (d.kind === "bush") {
-        ctx.fillStyle = pal.accent;
+        ctx.fillStyle = pal.foliageDark;
         ctx.beginPath();
-        ctx.arc(-5, 0, 7, 0, Math.PI * 2);
-        ctx.arc(5, -1, 8, 0, Math.PI * 2);
+        ctx.arc(-6, 0, 8, 0, Math.PI * 2);
+        ctx.arc(6, -1, 9, 0, Math.PI * 2);
+        ctx.arc(0, -6, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = pal.foliage;
+        ctx.beginPath();
+        ctx.arc(-3, -4, 6, 0, Math.PI * 2);
+        ctx.arc(4, -5, 5, 0, Math.PI * 2);
         ctx.fill();
       } else {
         ctx.fillStyle = "#7e8ba0";

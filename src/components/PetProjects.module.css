@@ -33,6 +33,12 @@
 .plat:hover {
   box-shadow: var(--glow-lime);
 }
+.td:hover {
+  box-shadow: 0 0 24px rgba(255, 184, 0, 0.42);
+}
+.td .name {
+  color: #ffcf6b;
+}
 
 .poster {
   display: block;

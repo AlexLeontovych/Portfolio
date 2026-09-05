@@ -3,11 +3,12 @@ import { useI18n } from "../i18n/I18nContext";
 import { useReveal } from "../hooks/useReveal";
 import { arcade } from "../lib/arcadeStore";
 import { platformer } from "../lib/platformerStore";
+import { td } from "../lib/tdStore";
 import { Gamepad } from "./Icons";
 import styles from "./PetProjects.module.css";
 
 /**
- * "Pet projects" — the two playable games that live inside this site.
+ * "Pet projects" — the playable games that live inside this site.
  *
  * Each card paints its own poster on a small canvas instead of shipping a
  * screenshot: the art is a few dozen lines, it stays sharp on any display,
@@ -17,6 +18,7 @@ import styles from "./PetProjects.module.css";
 
 const NEON_STACK = ["TypeScript", "Canvas 2D", "three.js", "Web Audio"];
 const PLAT_STACK = ["TypeScript", "Canvas 2D", "Fixed-step", "Web Audio"];
+const TD_STACK = ["TypeScript", "Canvas 2D", "Pathfinding", "Wave AI"];
 
 /** Neon horizon: sun, grid, taillights — NEON RUN in one frame. */
 function drawNeon(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
@@ -147,7 +149,73 @@ function drawForest(
   }
 }
 
-function Poster({ kind }: { kind: "neon" | "plat" }) {
+/** A scrap of the tower-defense board: winding road, two towers, a creep. */
+function drawKeep(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+  ctx.fillStyle = "#4a8a3c";
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#5aa347";
+  for (let i = 0; i < 14; i++) {
+    const x = ((i * 97) % 100) / 100 * w;
+    const y = ((i * 53) % 100) / 100 * h;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w * 0.09, h * 0.07, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // an S of road, drawn twice for the dark rim
+  const road = (width: number, colour: string) => {
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(-10, h * 0.28);
+    ctx.bezierCurveTo(w * 0.34, h * 0.24, w * 0.2, h * 0.82, w * 0.56, h * 0.74);
+    ctx.bezierCurveTo(w * 0.86, h * 0.68, w * 0.78, h * 0.2, w + 10, h * 0.3);
+    ctx.stroke();
+  };
+  road(h * 0.2, "#3b6b30");
+  road(h * 0.15, "#e6d59b");
+
+  // two towers beside it
+  const tower = (x: number, y: number, roof: string) => {
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(x, y + h * 0.035, w * 0.035, h * 0.018, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#6f7b8c";
+    ctx.fillRect(x - w * 0.032, y - h * 0.02, w * 0.064, h * 0.055);
+    ctx.fillStyle = "#8a5a33";
+    ctx.fillRect(x - w * 0.026, y - h * 0.085, w * 0.052, h * 0.07);
+    ctx.fillStyle = roof;
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.036, y - h * 0.085);
+    ctx.lineTo(x, y - h * 0.15);
+    ctx.lineTo(x + w * 0.036, y - h * 0.085);
+    ctx.closePath();
+    ctx.fill();
+  };
+  tower(w * 0.26, h * 0.62, "#c6d831");
+  tower(w * 0.7, h * 0.42, "#8f7bff");
+
+  // a creep trudging along
+  const p = (t * 0.16) % 1;
+  const cx = w * (0.08 + p * 0.8);
+  const cy = h * (0.32 + Math.sin(p * Math.PI * 2) * 0.2);
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 7, 8, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#7a3f8f";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffd45e";
+  ctx.fillRect(cx - 3, cy - 2, 2, 2);
+  ctx.fillRect(cx + 1, cy - 2, 2, 2);
+}
+
+function Poster({ kind }: { kind: "neon" | "plat" | "td" }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -178,6 +246,7 @@ function Poster({ kind }: { kind: "neon" | "plat" }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const t = (now - start) / 1000;
       if (kind === "neon") drawNeon(ctx, r.width, r.height, t);
+      else if (kind === "td") drawKeep(ctx, r.width, r.height, t);
       else drawForest(ctx, r.width, r.height, t, hero);
     };
 
@@ -222,6 +291,13 @@ export default function PetProjects() {
       desc: t("pet.plat_desc"),
       stack: PLAT_STACK,
       open: () => platformer.open(),
+    },
+    {
+      key: "td" as const,
+      name: t("pet.td_name"),
+      desc: t("pet.td_desc"),
+      stack: TD_STACK,
+      open: () => td.open(),
     },
   ];
 
