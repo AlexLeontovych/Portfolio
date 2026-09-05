@@ -118,6 +118,17 @@ WIDTH = 1024        # atlas width; a sprite's frames wrap inside it
 PAD = 2
 ALPHA = 12          # anything fainter than this is margin, not art
 SPECK = 4           # opaque pixels a row needs before it counts as content
+#: Where in the base the anchor sits, as a fraction of the base's half-width
+#: above its bottom edge.
+#:
+#: The towers were drawn from a lower camera than the maps, so a tower's own
+#: footprint ellipse is flatter than the pad it stands on — 0.35 against the
+#: pads' 0.7, measured off the twelve sheets. Put the anchor at the footprint's
+#: own centre (0.35) and the tower rides high with a crescent of sand in front
+#: of it; use the pad's aspect (0.7) and its base hangs over the pad's front
+#: rim. Half way between is what reads as standing in the ring, and the three
+#: towers were compared side by side on real pads to pick it.
+FOOTPRINT = 0.5
 
 
 def load(spec, base):
@@ -180,20 +191,20 @@ def base_centre(alpha, half=None):
     if not mids:
         return None
     if half is None:
-        # The footprint is an ellipse with the same aspect as the pads it
-        # stands on (34 by 24 in board space), so its centre sits 0.35 of
-        # the base's width above the bottom edge. The width is the drum
-        # wall's, read as the median over the rows between a tenth and four
-        # tenths of the way up — below that the corner bushes widen the
-        # silhouette, above it the rim flares and the turret begins.
-        lo = bottom - int((bottom - top) * 0.40)
-        hi = bottom - int((bottom - top) * 0.10)
-        widths = []
-        for y in range(lo, hi + 1):
-            xs = np.nonzero(alpha[y] > ALPHA)[0]
-            if xs.size:
-                widths.append(int(np.ptp(xs)))
-        half = 0.35 * float(np.median(widths)) if widths else (bottom - top) * 0.15
+        # The footprint is the ellipse the drum stands on. Its lowest point is
+        # the front of that ellipse and its widest columns are its sides, so
+        # the vertical half-axis is how much lower the middle of the bottom
+        # silhouette runs than its ends — measured, not assumed, because the
+        # towers were drawn from a lower camera than the maps and their
+        # footprints are flatter than the pads they stand on (0.35 against
+        # 0.7). Assuming the pads' aspect put the anchor twice too high in the
+        # sprite, which drew every tower low, sitting on its pad's front rim.
+        lo = bottom - int((bottom - top) * 0.45)
+        depth = (alpha[lo:bottom + 1] > ALPHA).sum(axis=0)
+        solid = np.nonzero(depth >= (bottom - lo) * 0.55)[0]
+        if solid.size < 8:
+            solid = np.nonzero(depth >= max(1, depth.max() * 0.5))[0]
+        half = FOOTPRINT * (int(solid[-1]) - int(solid[0])) / 2.0 if solid.size else (bottom - top) * 0.12
     return float(np.median(mids)), float(bottom - half), half
 
 
