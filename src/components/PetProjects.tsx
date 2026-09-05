@@ -150,7 +150,32 @@ function drawForest(
 }
 
 /** A scrap of the tower-defense board: winding road, two towers, a creep. */
-function drawKeep(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+/**
+ * The keep's poster is a still of the real game, baked by scripts/td_poster.py
+ * — the painted map, the painted towers on the pads the artist drew, creeps on
+ * the road he painted. It drifts slowly so the card is not dead, and it is a
+ * picture rather than the live board because the live board would have the
+ * landing page fetch a megabyte of map and atlas before anyone clicked.
+ *
+ * The drawn board below is what shows until the image lands.
+ */
+function drawKeep(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  t: number,
+  art: HTMLImageElement | null,
+) {
+  if (art) {
+    // cover the card, then drift by the overhang the cover left over
+    const k = Math.max(w / art.width, h / art.height) * 1.06;
+    const dw = art.width * k;
+    const dh = art.height * k;
+    const drift = Math.sin(t * 0.13) * 0.5;
+    ctx.drawImage(art, (w - dw) / 2 + (dw - w) * drift, (h - dh) / 2, dw, dh);
+    return;
+  }
+
   ctx.fillStyle = "#4a8a3c";
   ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = "#5aa347";
@@ -227,12 +252,15 @@ function Poster({ kind }: { kind: "neon" | "plat" | "td" }) {
     let live = false;
     const start = performance.now();
 
-    if (kind === "plat") {
+    if (kind === "plat" || kind === "td") {
       const img = new Image();
       img.onload = () => {
         hero = img;
       };
-      img.src = "./games/platformer/heroes/huntress/idle.png";
+      img.src =
+        kind === "td"
+          ? "./games/td/poster.webp"
+          : "./games/platformer/heroes/huntress/idle.png";
     }
 
     const frame = (now: number) => {
@@ -246,7 +274,7 @@ function Poster({ kind }: { kind: "neon" | "plat" | "td" }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const t = (now - start) / 1000;
       if (kind === "neon") drawNeon(ctx, r.width, r.height, t);
-      else if (kind === "td") drawKeep(ctx, r.width, r.height, t);
+      else if (kind === "td") drawKeep(ctx, r.width, r.height, t, hero);
       else drawForest(ctx, r.width, r.height, t, hero);
     };
 
