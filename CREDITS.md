@@ -40,6 +40,13 @@ own road and its own build pads, so both were traced off the picture into `art-s
 and `scripts/td_maps.py` bakes them into the level data — the game follows the painting rather
 than drawing a board of its own.
 
+The barracks and its garrison were generated for this project as well — three buildings of four
+sides, and a recruit, a knight and a paladin with four sides of idle, walk, attack and death.
+`scripts/td_barracks.py` cuts them: the same backdrop comes off the walk, attack and death
+sheets, every drawing is re-laid onto a true grid with its feet on a common line, and the
+building's door is composited out of the pack's gate phases so that the door moves and the
+thatched roof does not.
+
 The creeps are the same LuizMelo sheets the platformer uses, credited above.
 
 ## UI — IRONWOOD KEEP tower defense

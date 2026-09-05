@@ -315,19 +315,20 @@ def normalise(rgba, cell):
     return out, bands
 
 
-def cut(path, cell=None):
-    src = Image.open(path).convert("RGBA")
-    if np.asarray(src)[:, :, 3].min() == 0:
-        # two of the twelve arrived cut already, but not on the grid
-        rgba, bands = normalise(np.asarray(src).copy(), cell or CELL)
-        print(f"      rows at {', '.join(f'{a}-{b}' for a, b in bands)}")
-        return Image.fromarray(rgba, "RGBA")
+def strip(src):
+    """
+    Take the checkerboard out of a sheet and hand back RGBA, or None.
 
+    The cut lives on its own rather than inside the tower reader because the
+    barracks pack arrived with the same backdrop drawn into its walk, attack
+    and death sheets, and there is only one honest way to do this. None means
+    the sheet has no backdrop to take out.
+    """
     im = src.convert("RGB")
     a = np.asarray(im).astype(np.int16)
     tones = backdrop_tones(a)
     if not tones:
-        return src
+        return None
 
     spread = a.max(axis=2) - a.min(axis=2)
     near = np.zeros(a.shape[:2], dtype=bool)
@@ -353,7 +354,20 @@ def cut(path, cell=None):
     alpha[edge] = np.clip(dist[edge] / FRINGE * 255, 0, 255)
 
     alpha *= despeckle(alpha > 0)
-    rgba = np.dstack([np.asarray(im), alpha.astype(np.uint8)])
+    return np.dstack([np.asarray(im), alpha.astype(np.uint8)])
+
+
+def cut(path, cell=None):
+    src = Image.open(path).convert("RGBA")
+    if np.asarray(src)[:, :, 3].min() == 0:
+        # two of the twelve arrived cut already, but not on the grid
+        rgba, bands = normalise(np.asarray(src).copy(), cell or CELL)
+        print(f"      rows at {', '.join(f'{a}-{b}' for a, b in bands)}")
+        return Image.fromarray(rgba, "RGBA")
+
+    rgba = strip(src)
+    if rgba is None:
+        return src
     rgba, bands = normalise(rgba, cell or CELL)
     neut = (rgba[:, :, :3].max(axis=2).astype(np.int16)
             - rgba[:, :, :3].min(axis=2)) <= NEUTRAL

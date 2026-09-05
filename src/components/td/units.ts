@@ -142,12 +142,17 @@ export const TOWERS: Record<TowerId, TowerDef> = {
   },
   barracks: {
     name: "Barracks",
-    blurb: "Sends men to hold the road. Nothing else stops a creep walking.",
+    blurb: "A recruit, then two knights, then three paladins. Nothing else stops a creep walking.",
     kind: "physical", hitsAir: false, blocks: true, projectile: "none",
+    // One recruit, then two knights, then three paladins — the squad the art
+    // was drawn for. The first tier holds one man where it used to hold two,
+    // so he is worth nearly two of the old ones and costs less; from there
+    // the barracks grows by a body as well as by a tier, which is what makes
+    // upgrading it feel different from upgrading anything that shoots.
     tiers: [
-      { cost: 80, damage: 0, reload: 0, range: 190, soldiers: 2, soldierHp: 90, soldierDamage: 7 },
-      { cost: 110, damage: 0, reload: 0, range: 210, soldiers: 3, soldierHp: 150, soldierDamage: 11 },
-      { cost: 165, damage: 0, reload: 0, range: 230, soldiers: 3, soldierHp: 240, soldierDamage: 18 },
+      { cost: 70, damage: 0, reload: 0, range: 190, soldiers: 1, soldierHp: 170, soldierDamage: 14 },
+      { cost: 110, damage: 0, reload: 0, range: 210, soldiers: 2, soldierHp: 210, soldierDamage: 18 },
+      { cost: 165, damage: 0, reload: 0, range: 230, soldiers: 3, soldierHp: 265, soldierDamage: 23 },
     ],
   },
   bombard: {

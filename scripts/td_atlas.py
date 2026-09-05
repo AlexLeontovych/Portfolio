@@ -69,6 +69,11 @@ FACINGS = "urdl"
 TOWER_KINDS = ("crossbow", "cannon", "magic", "rocket")
 #: height a tower's trimmed frame is drawn at on the 960x540 board
 TOWER_DRAW = 68
+#: the barracks and the men it puts on the road, from scripts/td_barracks.py
+KEEP_CELL, KEEP_DRAW, GATE_PHASES = 352, 74, 3
+UNIT_CELL, SQUAD_DRAW = 288, 32
+SQUADS = {1: "recruit", 2: "knight", 3: "paladin"}
+ACTIONS = ("idle", "walk", "attack", "death")
 
 # One entry per kind, tier and facing: six firing frames each. Splitting the
 # facings apart rather than keeping all twenty-four together is what keeps the
@@ -106,14 +111,29 @@ SPRITES = [
     ("blood.death",  "z2", "Blood Monster_A/Blood Monster_A/Blood Monster_A_Death.png",
                                                      100, 100, 4, 0, 4, 30, "blood"),
 
-    # --- the defenders ------------------------------------------------------
-    ("soldier.walk", "z1", "Soldier/Soldier/Soldier_Walk.png",
-                                                     100, 100, 8, 0, 8, 28, "soldier"),
-    ("soldier.atk",  "z1", "Soldier/Soldier/Soldier_Attack01.png",
-                                                     100, 100, 6, 0, 6, 28, "soldier"),
+] + [
+    # --- the barracks: one building per tier, four sides, a door that opens --
+    (f"b.keep.{tier}.{FACINGS[d]}", "ai", f"barracks/level_{tier}.webp",
+     KEEP_CELL, KEEP_CELL, GATE_PHASES, d * GATE_PHASES, GATE_PHASES,
+     KEEP_DRAW, f"keep.{FACINGS[d]}")
+    for tier in (1, 2, 3)
+    for d in range(4)
+] + [
+    # --- and its garrison: a recruit, then knights, then paladins -----------
+    #
+    # Four sides of four actions of six frames, for each of three tiers. They
+    # are grouped by SIDE rather than by man, because the pack drew the front
+    # view a fifth taller than the back and one scale for all four would make
+    # a soldier grow every time he turned round. Grouped this way each side is
+    # scaled to the same drawn height and turning changes nothing but the pose.
+    (f"s.{SQUADS[tier]}.{act}.{FACINGS[d]}", "ai", f"soldiers/level_{tier}/{act}.webp",
+     UNIT_CELL, UNIT_CELL, 6, d * 6, 6, SQUAD_DRAW, f"squad.{FACINGS[d]}")
+    for tier in (1, 2, 3)
+    for act in ACTIONS
+    for d in range(4)
 ]
 
-AI_ONLY = {"t", "p", "fx"}     # prefixes of the painted, project-owned art
+AI_ONLY = {"t", "p", "fx", "b", "s"}   # prefixes of the painted, project-owned art
 WIDTH = 1024        # atlas width; a sprite's frames wrap inside it
 PAD = 2
 ALPHA = 12          # anything fainter than this is margin, not art
@@ -154,8 +174,10 @@ def load(spec, base):
             "draw": draw, "group": group or name}
 
 
-#: sprites whose frames are registered on the drawn base rather than the cell
-ALIGN_BASE = set(TOWER_KINDS)
+#: sprites whose frames are registered on the drawn base rather than the cell.
+#: Buildings, all of them: what stands on a pad has to stand IN the ring, and
+#: the ring's own aspect is not the building's — see FOOTPRINT.
+ALIGN_BASE = set(TOWER_KINDS) | {f"keep.{d}" for d in FACINGS}
 #: room left round a cell for the registration shifts
 MARGIN = 48
 

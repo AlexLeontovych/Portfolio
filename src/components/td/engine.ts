@@ -46,6 +46,24 @@ const SHOT_TILT = Math.PI / 4;
  * clockwise is the next entry, which is the order the art was drawn in.
  */
 const FACING = ["r", "d", "l", "u"];
+/** The three squads, by the tier of the barracks that musters them. */
+const SQUAD = ["recruit", "knight", "paladin"];
+/** How fast a soldier marches between his gate, his post and his enemy. */
+const MARCH = 46;
+/** Seconds one loop of the walk, the idle and the death animation takes. */
+const STEP_TIME = 0.6;
+const BREATH_TIME = 1.6;
+const FALL_TIME = 0.8;
+/** Seconds between one soldier's blows. */
+const SWING_TIME = 0.9;
+/** Seconds before the barracks has another man ready. */
+const MUSTER_TIME = 9;
+/** How near the road a creep must come before the post's man takes it on. */
+const GRAB = 34;
+/** And how near the two of them stand while they fight. */
+const REACH = 13;
+/** Seconds the door takes to swing open or shut. */
+const GATE_TIME = 0.4;
 
 export type Phase = "loading" | "playing" | "paused" | "won" | "lost";
 
@@ -106,11 +124,24 @@ interface Creep {
   flash: number;
 }
 
+/**
+ * One man from a barracks.
+ *
+ * He has a post on the road and spends the whole game going to it, standing
+ * on it, stepping off it to meet whatever arrives, and being carried back
+ * through the gate when that goes badly. `action` is which of his four
+ * animations is playing and `t` is how far into it he is; everything else is
+ * where he is and how much of him is left.
+ */
 interface Soldier {
   x: number;
   y: number;
+  /** his post: where he stands when there is nothing to fight */
   hx: number;
   hy: number;
+  /** and the doorway he came out of, which is where he comes back */
+  dx: number;
+  dy: number;
   hp: number;
   maxHp: number;
   damage: number;
@@ -119,6 +150,11 @@ interface Soldier {
   dead: boolean;
   respawn: number;
   tower: Tower;
+  action: "idle" | "walk" | "attack" | "death";
+  /** seconds into that action */
+  t: number;
+  /** which way he is looking */
+  angle: number;
 }
 
 interface Tower {
@@ -134,6 +170,10 @@ interface Tower {
   soldiers: Soldier[];
   /** barracks only: distance along the road the men hold */
   rally: number;
+  /** and which of the map's roads that is */
+  lane: number;
+  /** how far the barracks door is open, 0 shut to 1 wide */
+  gate: number;
   spent: number;
 }
 
@@ -493,7 +533,8 @@ export class TdEngine {
     this.gold -= cost;
     const tower: Tower = {
       slot: this.selected, x: slot.x, y: slot.y, id, tier: 0,
-      cooldown: 0, angle: 0, fire: -1, soldiers: [], rally: 0, spent: cost,
+      cooldown: 0, angle: 0, fire: -1, soldiers: [], rally: 0, lane: 0,
+      gate: 0, spent: cost,
     };
     if (TOWERS[id].blocks) this.assignRally(tower);
     this.towers.push(tower);
@@ -541,20 +582,38 @@ export class TdEngine {
     return this.towers.find((t) => t.slot === this.selected);
   }
 
-  /** Put a barracks' men on the nearest stretch of road inside its reach. */
+  /**
+   * Put a barracks' men on the nearest stretch of road inside its reach.
+   *
+   * Every road, not only the first. Three of the five maps are painted with
+   * more than one way across, and a barracks bought to watch the second one
+   * used to send its men to the main road instead — or, if that was out of
+   * range, to the spawn, which is the far corner of the map.
+   */
   private assignRally(t: Tower) {
     const range = TOWERS[t.id].tiers[t.tier].range;
-    let best = 0;
     let bestD = Infinity;
-    for (let d = 0; d < this.level.path.length; d += 12) {
-      const p = pointAt(this.level.path, d);
-      const dist = Math.hypot(p.x - t.x, p.y - t.y);
-      if (dist < bestD && dist <= range) {
-        bestD = dist;
-        best = d;
+    for (let lane = 0; lane < this.level.paths.length; lane++) {
+      const path = this.level.paths[lane];
+      for (let d = 0; d < path.length; d += 12) {
+        const p = pointAt(path, d);
+        const dist = Math.hypot(p.x - t.x, p.y - t.y);
+        if (dist < bestD && dist <= range) {
+          bestD = dist;
+          t.rally = d;
+          t.lane = lane;
+        }
       }
     }
-    t.rally = best;
+    if (bestD === Infinity) {
+      t.rally = 0;
+      t.lane = 0;
+      return;
+    }
+    // the building turns to face the road it is watching, and the door it
+    // opens is the one on that side
+    const p = pointAt(this.level.paths[t.lane], t.rally);
+    t.angle = Math.atan2(p.y - t.y, p.x - t.x);
   }
 
   /* ---------------------------------- loop --------------------------------- */
@@ -679,7 +738,10 @@ export class TdEngine {
           c.blocker.hp -= Math.max(4, c.def.hp * 0.06);
           if (c.blocker.hp <= 0) {
             c.blocker.dead = true;
-            c.blocker.respawn = 9;
+            c.blocker.respawn = MUSTER_TIME;
+            c.blocker.action = "death";
+            c.blocker.t = 0;
+            c.blocker.target = null;
             this.puff(c.blocker.x, c.blocker.y, 8, "#ff5f86");
             c.blocker = null;
           }
@@ -768,52 +830,121 @@ export class TdEngine {
     }
   }
 
+  /**
+   * A barracks and the men it keeps on the road.
+   *
+   * The tower itself never shoots. It holds a POST on the nearest stretch of
+   * road it can reach, and each of its men spends the game in one of four
+   * states, which are also his four animations:
+   *
+   *   walk    on his way somewhere — out of the gate to his post at the
+   *           start, forward to meet whatever has arrived, or back again
+   *           once the road is clear;
+   *   idle    standing on his post, facing the way the enemy comes from;
+   *   attack  toe to toe with a creep. Whoever he is holding cannot walk
+   *           past him, which is the whole point of the building: a creep
+   *           stopped is a creep every tower in reach keeps shooting;
+   *   death   killed. He plays the six frames once, lies where he fell, and
+   *           the barracks sends a replacement out of the gate after a while.
+   *
+   * The door is open exactly while somebody is walking through it.
+   */
   private updateBarracks(t: Tower, dt: number) {
     const tier = TOWERS[t.id].tiers[t.tier];
     const want = tier.soldiers ?? 0;
+    const path = this.level.paths[t.lane] ?? this.level.path;
+    const gate = this.gateOf(t);
     while (t.soldiers.length < want) {
       const i = t.soldiers.length;
-      const spread = (i - (want - 1) / 2) * 26;
-      const p = pointAt(this.level.path, t.rally);
-      const h = headingAt(this.level.path, t.rally);
-      const hx = p.x - h.y * spread;
-      const hy = p.y + h.x * spread;
+      // spread the squad across the road rather than stacking it on one spot
+      const spread = (i - (want - 1) / 2) * 22;
+      const p = pointAt(path, t.rally);
+      const h = headingAt(path, t.rally);
       t.soldiers.push({
-        x: hx, y: hy, hx, hy, hp: tier.soldierHp ?? 60, maxHp: tier.soldierHp ?? 60,
-        damage: tier.soldierDamage ?? 5, target: null, swing: 0, dead: false, respawn: 0, tower: t,
+        x: gate.x, y: gate.y, dx: gate.x, dy: gate.y,
+        hx: p.x - h.y * spread, hy: p.y + h.x * spread,
+        hp: tier.soldierHp ?? 60, maxHp: tier.soldierHp ?? 60,
+        damage: tier.soldierDamage ?? 5, target: null, swing: 0, dead: false,
+        respawn: 0, tower: t, action: "walk", t: 0, angle: t.angle,
       });
     }
 
+    let inTheDoorway = false;
     for (const s of t.soldiers) {
+      s.t += dt;
       if (s.dead) {
         s.respawn -= dt;
         if (s.respawn <= 0) {
           s.dead = false;
           s.hp = s.maxHp;
-          s.x = s.hx;
-          s.y = s.hy;
+          s.x = s.dx;
+          s.y = s.dy;
           s.target = null;
+          this.march(s, "walk", t.angle);
         }
         continue;
       }
+
+      // whoever he was holding may have died, or been taken by someone else
       if (s.target && (s.target.dead || s.target.blocker !== s)) s.target = null;
       if (!s.target) {
         for (const c of this.creeps) {
           if (c.dead || c.blocker || c.def.flying || c.def.ignoresBlockers) continue;
           const p = this.creepPos(c);
-          if (Math.hypot(p.x - s.hx, p.y - s.hy) > 40) continue;
+          if (Math.hypot(p.x - s.hx, p.y - s.hy) > GRAB) continue;
           c.blocker = s;
           s.target = c;
           break;
         }
       }
-      if (!s.target) continue;
+
+      // where he wants to be: on his enemy, or back on his post
+      const to = s.target ? this.creepPos(s.target) : { x: s.hx, y: s.hy };
+      const near = s.target ? REACH : 2;
+      const dx = to.x - s.x;
+      const dy = to.y - s.y;
+      const gap = Math.hypot(dx, dy);
+      if (gap > near) {
+        const step = Math.min(MARCH * dt, gap - near);
+        s.x += (dx / gap) * step;
+        s.y += (dy / gap) * step;
+        this.march(s, "walk", Math.atan2(dy, dx));
+        if (!s.target && Math.hypot(s.x - s.dx, s.y - s.dy) < 26) inTheDoorway = true;
+        continue;
+      }
+
+      if (!s.target) {
+        // on his post, looking back down the road at what is coming
+        const h = headingAt(path, t.rally);
+        this.march(s, "idle", Math.atan2(-h.y, -h.x));
+        continue;
+      }
+
+      this.march(s, "attack", Math.atan2(dy, dx));
       s.swing -= dt;
       if (s.swing <= 0) {
-        s.swing = 0.9;
+        s.swing = SWING_TIME;
+        s.t = 0;                       // the swing and its animation start together
         this.hurtCreep(s.target, s.damage, "physical");
       }
     }
+
+    const open = inTheDoorway ? 1 : 0;
+    t.gate += Math.sign(open - t.gate) * Math.min(dt / GATE_TIME, Math.abs(open - t.gate));
+  }
+
+  /** Put a soldier into an action, restarting its clock only on a change. */
+  private march(s: Soldier, action: Soldier["action"], angle: number) {
+    if (s.action !== action) {
+      s.action = action;
+      s.t = 0;
+    }
+    s.angle = angle;
+  }
+
+  /** The doorway of a barracks: a step out of the building, road side. */
+  private gateOf(t: Tower): Point {
+    return { x: t.x + Math.cos(t.angle) * 12, y: t.y + Math.sin(t.angle) * 12 + 4 };
   }
 
   /* -------------------------------- shots ---------------------------------- */
@@ -962,8 +1093,9 @@ export class TdEngine {
     }
     this.drawSlots(ctx, pal, !!bg);
     this.drawTowers(ctx);
+    this.drawSoldiers(ctx, true);      // the fallen, under everyone's boots
     this.drawCreeps(ctx);
-    this.drawSoldiers(ctx);
+    this.drawSoldiers(ctx, false);
     // the gate facades go over whoever is walking through them
     const gates = this.level.overlay ? this.maps[this.level.overlay] : undefined;
     if (gates) ctx.drawImage(gates, 0, 0, BOARD.w, BOARD.h);
@@ -1159,7 +1291,7 @@ export class TdEngine {
       const tier = t.tier;
       const art = TOWERS[t.id].art;
 
-      if (art) {
+      if (art || TOWERS[t.id].blocks) {
         // the sprite's anchor is the centre of its base, so drawing it at
         // the slot puts the base disc on the pad disc — standing in the
         // ring, not hovering above it
@@ -1169,6 +1301,25 @@ export class TdEngine {
         ctx.ellipse(t.x, t.y + 3, 27, 12, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
+      }
+
+      if (TOWERS[t.id].blocks) {
+        // A barracks does not aim, so it faces the road it watches, and its
+        // three frames are the door: shut, ajar, open. Only the door moves —
+        // the pack drew each phase as a whole new building, thatch and all,
+        // and cycling those would have set the roof crawling.
+        const face = FACING[(Math.round(t.angle / (Math.PI / 2)) + 4) % 4];
+        const name = `b.keep.${tier + 1}.${face}`;
+        if (drawSprite(ctx, this.atlas, name, t.x, t.y, {
+          frame: Math.min(2, Math.round(t.gate * 2)),
+        })) {
+          this.drawTierPips(ctx, t.x, t.y + 15, tier);
+          if (sel) this.drawRange(ctx, t);
+          continue;
+        }
+      }
+
+      if (art) {
         // one sheet per facing, six frames each: the tower turns to whichever
         // quarter it last aimed at and runs the six once per shot
         const face = FACING[(Math.round(t.angle / (Math.PI / 2)) + 4) % 4];
@@ -1314,9 +1465,30 @@ export class TdEngine {
     }
   }
 
-  private drawSoldiers(ctx: CanvasRenderingContext2D) {
+  /**
+   * The garrison, each man in whichever of his four animations is running.
+   *
+   * A dead one is drawn too, stopped on his last frame: the body stays until
+   * his replacement is ready, so the gap a fallen soldier leaves is something
+   * the player can see rather than infer from the road not holding.
+   */
+  private drawSoldiers(ctx: CanvasRenderingContext2D, fallen: boolean) {
     for (const t of this.towers) {
+      const squad = SQUAD[t.tier] ?? SQUAD[0];
       for (const s of t.soldiers) {
+        if (s.dead !== fallen) continue;
+        const face = FACING[(Math.round(s.angle / (Math.PI / 2)) + 4) % 4];
+        const frame =
+          s.action === "attack" ? Math.min(5, Math.floor((1 - s.swing / SWING_TIME) * 6)) :
+          s.action === "death" ? Math.min(5, Math.floor((s.t / FALL_TIME) * 6)) :
+          Math.floor((s.t / (s.action === "walk" ? STEP_TIME : BREATH_TIME)) * 6) % 6;
+        if (drawSprite(ctx, this.atlas, `s.${squad}.${s.action}.${face}`, s.x, s.y, {
+          frame, alpha: s.dead ? 0.85 : 1,
+        })) {
+          if (!s.dead) this.drawSoldierHp(ctx, s);
+          continue;
+        }
+
         if (s.dead) continue;
         ctx.save();
         ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -1330,15 +1502,18 @@ export class TdEngine {
         ctx.fillStyle = "#c6d831";
         ctx.fillRect(s.x + 5, s.y - 16, 3, 16);
         ctx.restore();
-        const f = s.hp / s.maxHp;
-        if (f < 1) {
-          ctx.fillStyle = "rgba(6,12,20,0.8)";
-          ctx.fillRect(s.x - 10, s.y - 26, 20, 4);
-          ctx.fillStyle = "#6ad0ff";
-          ctx.fillRect(s.x - 9, s.y - 25, 18 * f, 2);
-        }
+        this.drawSoldierHp(ctx, s);
       }
     }
+  }
+
+  private drawSoldierHp(ctx: CanvasRenderingContext2D, s: Soldier) {
+    const f = s.hp / s.maxHp;
+    if (f >= 1) return;
+    ctx.fillStyle = "rgba(6,12,20,0.8)";
+    ctx.fillRect(s.x - 10, s.y - 34, 20, 4);
+    ctx.fillStyle = "#6ad0ff";
+    ctx.fillRect(s.x - 9, s.y - 33, 18 * f, 2);
   }
 
   private drawShots(ctx: CanvasRenderingContext2D) {
