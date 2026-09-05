@@ -20,8 +20,10 @@ export interface AtlasEntry {
   /** one frame, in board units */
   w: number;
   h: number;
-  /** frames in the strip, laid left to right */
+  /** frames in this sprite */
   n: number;
+  /** frames per row: a sprite too wide for the atlas wraps onto more rows */
+  row: number;
   /** the anchor, measured from the frame's top-left corner */
   ax: number;
   ay: number;
@@ -87,9 +89,10 @@ export function drawSprite(
   if (scale !== 1) ctx.scale(scale, scale);
   if (flip) ctx.scale(-1, 1);
   if (alpha !== 1) ctx.globalAlpha *= alpha;
+  const per = e.row || e.n;
   ctx.drawImage(
     atlas.img,
-    e.x + f * e.w, e.y, e.w, e.h,
+    e.x + (f % per) * e.w, e.y + Math.floor(f / per) * e.h, e.w, e.h,
     -ax, -ay, e.w, e.h,
   );
   ctx.restore();

@@ -38,6 +38,12 @@ const SHOT_ART: Record<"arrow" | "bolt" | "shell" | "rocket", string> = {
 /** The projectiles were all painted flying down-right, at 45 degrees. */
 const SHOT_TILT = Math.PI / 4;
 
+/**
+ * Tower sheets by facing. An angle of zero points right and each quarter turn
+ * clockwise is the next entry, which is the order the art was drawn in.
+ */
+const FACING = ["r", "d", "l", "u"];
+
 export type Phase = "loading" | "playing" | "paused" | "won" | "lost";
 
 export interface Hud {
@@ -1089,16 +1095,19 @@ export class TdEngine {
       const art = TOWERS[t.id].art;
 
       if (art) {
-        const scale = 1 + tier * 0.09;
         ctx.save();
         ctx.fillStyle = "rgba(0,0,0,0.3)";
         ctx.beginPath();
-        ctx.ellipse(t.x, t.y + 8, 26 * scale, 10 * scale, 0, 0, Math.PI * 2);
+        ctx.ellipse(t.x, t.y + 6, 24, 9, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
-        const frame = t.fire < 0 ? 0 : 1 + Math.floor((t.fire / FIRE_TIME) * 5);
-        if (drawSprite(ctx, this.atlas, art, t.x, t.y + 10, { frame, scale })) {
-          this.drawTierPips(ctx, t.x, t.y + 14, tier);
+        // one sheet per facing, six frames each: the tower turns to whichever
+        // quarter it last aimed at and runs the six once per shot
+        const face = FACING[(Math.round(t.angle / (Math.PI / 2)) + 4) % 4];
+        const phase = t.fire < 0 ? 0 : Math.min(5, 1 + Math.floor((t.fire / FIRE_TIME) * 5));
+        const name = `t.${art}.${tier + 1}.${face}`;
+        if (drawSprite(ctx, this.atlas, name, t.x, t.y + 8, { frame: phase })) {
+          this.drawTierPips(ctx, t.x, t.y + 12, tier);
           if (sel) this.drawRange(ctx, t);
           continue;
         }

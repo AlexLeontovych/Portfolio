@@ -26,10 +26,14 @@ and arena biomes reuse the same sheets, recoloured at runtime.
 
 ## Painted art — IRONWOOD KEEP tower defense
 
-The four tower sheets, the projectiles and the blast (`art-src/td/*.webp`) were generated for this
-project by its author. `scripts/td_atlas.py` cuts, trims and scales them into the single texture
-the game draws from (`public/games/td/atlas.webp`); the full-size sheets stay in `art-src/` and are
-never served.
+The tower sheets, the projectiles and the blast were generated for this project by its author.
+Four kinds of tower, three tiers each, four facings of six firing frames — 288 frames in all.
+
+The sheets arrived with the transparency checker drawn into them as real pixels, so
+`scripts/td_cutout.py` removes it (`art-src/td/towers/<kind>/level_<n>.webp`) and
+`scripts/td_atlas.py` then cuts, trims and scales every frame into the single texture the game
+draws from (`public/games/td/atlas.webp`). The full-size sheets stay in `art-src/` and are never
+served.
 
 The creeps are the same LuizMelo sheets the platformer uses, credited above.
 

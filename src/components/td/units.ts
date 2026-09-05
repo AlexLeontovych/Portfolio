@@ -104,8 +104,11 @@ export interface TowerDef {
   /** barracks place men on the road instead of shooting */
   blocks: boolean;
   projectile: "arrow" | "bolt" | "shell" | "rocket" | "none";
-  /** sprite in the atlas; the barracks has none yet and is drawn by hand */
-  art?: "t.crossbow" | "t.mage" | "t.cannon" | "t.gatling";
+  /**
+   * Family of tower sheets in the atlas: `t.<art>.<tier>` holds four facings
+   * of six firing frames. The barracks has no art yet and is drawn by hand.
+   */
+  art?: "crossbow" | "magic" | "cannon" | "rocket";
   tiers: [TowerTier, TowerTier, TowerTier];
 }
 
@@ -114,7 +117,7 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     name: "Archer Tower",
     blurb: "Cheap, quick, hits anything. Armour blunts it.",
     kind: "physical", hitsAir: true, blocks: false, projectile: "arrow",
-    art: "t.crossbow",
+    art: "crossbow",
     tiers: [
       { cost: 70, damage: 9, reload: 0.75, range: 150 },
       { cost: 90, damage: 15, reload: 0.62, range: 172 },
@@ -125,7 +128,7 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     name: "Mage Tower",
     blurb: "Slow and expensive, but armour means nothing to it.",
     kind: "magic", hitsAir: true, blocks: false, projectile: "bolt",
-    art: "t.mage",
+    art: "magic",
     tiers: [
       { cost: 100, damage: 26, reload: 1.5, range: 140 },
       { cost: 130, damage: 44, reload: 1.35, range: 158 },
@@ -146,7 +149,7 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     name: "Bombard",
     blurb: "Lobs shells into a crowd. Cannot touch anything airborne.",
     kind: "physical", hitsAir: false, blocks: false, projectile: "shell",
-    art: "t.cannon",
+    art: "cannon",
     tiers: [
       { cost: 120, damage: 30, reload: 2.2, range: 165, splash: 46 },
       { cost: 150, damage: 52, reload: 2.0, range: 182, splash: 54 },
@@ -157,7 +160,7 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     name: "Gun Battery",
     blurb: "Fires far faster than it hits hard. Give it a long stretch of road.",
     kind: "physical", hitsAir: true, blocks: false, projectile: "rocket",
-    art: "t.gatling",
+    art: "rocket",
     tiers: [
       { cost: 95, damage: 6, reload: 0.3, range: 128 },
       { cost: 125, damage: 10, reload: 0.26, range: 142 },

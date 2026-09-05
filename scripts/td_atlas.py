@@ -9,8 +9,9 @@ public/games/td/atlas.webp plus an index in atlas.json.
 
 Two kinds of source:
 
-  art-src/td/*.webp   towers, projectiles and the blast — art generated for
-                      this project, versioned with it.
+  art-src/td/         towers, projectiles and the blast — art generated for
+                      this project, versioned with it. The tower sheets come
+                      out of scripts/td_cutout.py.
 
   a local pack copy   Tiny Swords, the Zerie character packs and the
                       GandalfHardcore archer. Those are free to use in a game
@@ -22,8 +23,10 @@ Two kinds of source:
 
 Trimming matters as much as scaling: several packs park a 17px character in
 the middle of a 100x100 cell, which would otherwise cost 35x its own area in
-the atlas. Frames of one animated thing are trimmed to a SHARED box (their
-`group`), so a sprite does not jump when it switches animation.
+the atlas. Each sheet is trimmed to its own frames, and sprites that belong
+together (their `group`) share a SCALE rather than a box — the anchor is
+measured back to the source cell, so a tower still lands on the same spot
+when it upgrades to art with a different outline.
 
 Usage:
     python scripts/td_atlas.py [path to extracted packs]
@@ -58,13 +61,24 @@ PACKS = {
 # drawn at on the 960x540 board — the transparent margin is trimmed away, so
 # it is the height you actually see. Sprites sharing a `group` are trimmed to
 # one box and scaled together, and the group's FIRST entry sets that scale.
-SPRITES = [
-    # --- towers: six frames each, frame 0 idle, 1-5 the shot ---------------
-    ("t.crossbow", "ai", "tower-crossbow.webp", 512, 512, 3, 0, 6, 88, None),
-    ("t.cannon",   "ai", "tower-cannon.webp",   512, 512, 3, 0, 6, 88, None),
-    ("t.gatling",  "ai", "tower-gatling.webp",  512, 512, 3, 0, 6, 88, None),
-    ("t.mage",     "ai", "tower-mage.webp",     512, 512, 3, 0, 6, 92, None),
+#: the four rows of a tower sheet, top to bottom
+FACINGS = "urdl"
+TOWER_KINDS = ("crossbow", "cannon", "magic", "rocket")
+#: height a tower's trimmed frame is drawn at on the 960x540 board
+TOWER_DRAW = 68
 
+# One entry per kind, tier and facing: six firing frames each. Splitting the
+# facings apart rather than keeping all twenty-four together is what keeps the
+# atlas small — a muzzle flash pointing left should not pad out the frame of a
+# tower firing up. All of a kind's entries share a group, so every tier and
+# every facing is drawn at one scale and upgrading grows the tower in place.
+SPRITES = [
+    (f"t.{kind}.{tier}.{FACINGS[d]}", "ai", f"towers/{kind}/level_{tier}.webp",
+     256, 256, 6, d * 6, 6, TOWER_DRAW, kind)
+    for kind in TOWER_KINDS
+    for tier in (1, 2, 3)
+    for d in range(4)
+] + [
     # --- what they fire, and what it does on arrival ------------------------
     ("p.arrow",  "ai", "shots-and-blast.webp", 384, 341, 4, 0, 1, 26, None),
     ("p.bomb",   "ai", "shots-and-blast.webp", 384, 341, 4, 1, 1, 20, None),
@@ -94,15 +108,13 @@ SPRITES = [
                                                      100, 100, 8, 0, 8, 28, "soldier"),
     ("soldier.atk",  "z1", "Soldier/Soldier/Soldier_Attack01.png",
                                                      100, 100, 6, 0, 6, 28, "soldier"),
-    ("archer.idle",  "ts", "Units/Blue Units/Archer/Archer_Idle.png",
-                                                     192, 192, 6, 0, 6, 34, "archer"),
-    ("archer.shoot", "ts", "Units/Blue Units/Archer/Archer_Shoot.png",
-                                                     192, 192, 8, 0, 8, 34, "archer"),
 ]
 
 AI_ONLY = {"t", "p", "fx"}     # prefixes of the painted, project-owned art
+WIDTH = 1024        # atlas width; a sprite's frames wrap inside it
 PAD = 2
 ALPHA = 12          # anything fainter than this is margin, not art
+SPECK = 4           # opaque pixels a row needs before it counts as content
 
 
 def load(spec, base):
@@ -129,17 +141,27 @@ def load(spec, base):
 
 
 def content_box(im, boxes):
-    """Union alpha bounding box over `boxes`, in cell-local coordinates."""
+    """
+    Union alpha bounding box over `boxes`, in cell-local coordinates.
+
+    A row counts as content only once a few pixels of it are opaque. A single
+    stray pixel left over from cutting a background would otherwise stretch
+    the box to the whole cell, and every frame in the atlas would carry that
+    emptiness — on a 288-frame tower set that is the difference between a
+    quarter-megabyte atlas and a whole one.
+    """
     a = np.asarray(im)[:, :, 3]
-    x0 = y0 = 10 ** 9
-    x1 = y1 = -1
+    cols = None
+    rows = None
     for (bx0, by0, bx1, by1) in boxes:
-        ys, xs = np.nonzero(a[by0:by1, bx0:bx1] > ALPHA)
-        if not xs.size:
-            continue
-        x0 = min(x0, int(xs.min())); x1 = max(x1, int(xs.max()) + 1)
-        y0 = min(y0, int(ys.min())); y1 = max(y1, int(ys.max()) + 1)
-    return None if x1 < 0 else (x0, y0, x1, y1)
+        m = a[by0:by1, bx0:bx1] > ALPHA
+        cols = m.sum(axis=0) if cols is None else np.maximum(cols, m.sum(axis=0))
+        rows = m.sum(axis=1) if rows is None else np.maximum(rows, m.sum(axis=1))
+    xs = np.nonzero(cols >= SPECK)[0]
+    ys = np.nonzero(rows >= SPECK)[0]
+    if not xs.size or not ys.size:
+        return None
+    return int(xs[0]), int(ys[0]), int(xs[-1]) + 1, int(ys[-1]) + 1
 
 
 def main():
@@ -160,34 +182,35 @@ def main():
             continue
         sheets.append(s)
 
-    # One trim box and one scale per group. `ref` is the first sheet listed:
-    # an attack frame reaches further than the body, and the body is what
-    # `draw` describes, so the swing must not shrink the character.
+    # One scale per group, taken from the first sheet listed. That sheet is
+    # the resting pose, so a swing or a muzzle flash in a later sheet cannot
+    # shrink the thing it belongs to.
     groups = {}
     for s in sheets:
-        g = groups.get(s["group"])
-        if g is None:
-            groups[s["group"]] = {"box": s["own"], "ref": s["own"], "draw": s["draw"]}
-            continue
-        b, o = g["box"], s["own"]
-        g["box"] = (min(b[0], o[0]), min(b[1], o[1]), max(b[2], o[2]), max(b[3], o[3]))
+        groups.setdefault(s["group"], {"ref": s["own"], "draw": s["draw"]})
 
     cut = []
     for s in sheets:
         g = groups[s["group"]]
-        bx0, by0, bx1, by1 = g["box"]
+        bx0, by0, bx1, by1 = s["own"]
         scale = g["draw"] / (g["ref"][3] - g["ref"][1])
         fw, fh = bx1 - bx0, by1 - by0
         nw, nh = max(1, round(fw * scale)), max(1, round(fh * scale))
         n = len(s["boxes"])
 
-        strip = Image.new("RGBA", (fw * n, fh), (0, 0, 0, 0))
+        # Lay the frames out in a grid rather than one long strip: a tower's
+        # twenty-four frames are wider than the whole atlas, and a strip that
+        # does not fit is a strip with frames missing.
+        per_row = max(1, min(n, WIDTH // nw))
+        grid_rows = -(-n // per_row)
+        strip = Image.new("RGBA", (fw * per_row, fh * grid_rows), (0, 0, 0, 0))
         for i, (cx0, cy0, _, _) in enumerate(s["boxes"]):
             strip.paste(s["im"].crop((cx0 + bx0, cy0 + by0, cx0 + bx1, cy0 + by1)),
-                        (i * fw, 0))
+                        ((i % per_row) * fw, (i // per_row) * fh))
         cut.append({
-            "name": s["name"], "img": strip.resize((nw * n, nh), Image.LANCZOS),
-            "fw": nw, "fh": nh, "n": n,
+            "name": s["name"],
+            "img": strip.resize((nw * per_row, nh * grid_rows), Image.LANCZOS),
+            "fw": nw, "fh": nh, "n": n, "per_row": per_row,
             # Where the cell's centre-bottom sits inside the trimmed frame.
             # The engine anchors on that, so a sprite stands on the road at
             # the spot its author drew it standing, and a swing that widens
@@ -199,7 +222,7 @@ def main():
     # shelf pack, tallest first — good enough for a few dozen strips and it
     # keeps the atlas close to square without a bin-packing library
     cut.sort(key=lambda c: -c["img"].height)
-    width = 1024
+    width = WIDTH
     x = y = shelf = 0
     for c in cut:
         w, h = c["img"].size
@@ -215,7 +238,8 @@ def main():
     for c in cut:
         atlas.paste(c["img"], (c["x"], c["y"]), c["img"])
         index[c["name"]] = {"x": c["x"], "y": c["y"], "w": c["fw"], "h": c["fh"],
-                            "n": c["n"], "ax": c["ax"], "ay": c["ay"]}
+                            "n": c["n"], "row": c["per_row"],
+                            "ax": c["ax"], "ay": c["ay"]}
 
     # WebP, and lossy unless there is pixel art in here: the painted sheets
     # are three times smaller for no visible loss, but lossy ringing around a
@@ -223,7 +247,7 @@ def main():
     pixel = any(c["name"].split(".")[0] not in AI_ONLY for c in cut)
     out = os.path.join(OUT_DIR, "atlas.webp")
     os.makedirs(OUT_DIR, exist_ok=True)
-    atlas.save(out, "WEBP", method=6, lossless=pixel, quality=90)
+    atlas.save(out, "WEBP", method=6, lossless=pixel, quality=84)
     with open(os.path.join(OUT_DIR, "atlas.json"), "w", encoding="utf-8") as f:
         json.dump(index, f, indent=1, sort_keys=True)
 
@@ -232,7 +256,8 @@ def main():
     for n in sorted(index):
         e = index[n]
         print(f"  {n:13} {e['n']:2} x {e['w']:3}x{e['h']:<3} "
-              f"anchor {e['ax']:5.1f},{e['ay']:5.1f}")
+              f"{e['n'] // e['row'] + (1 if e['n'] % e['row'] else 0)} row(s) of {e['row']:2}"
+              f"   anchor {e['ax']:5.1f},{e['ay']:5.1f}")
 
 
 if __name__ == "__main__":
