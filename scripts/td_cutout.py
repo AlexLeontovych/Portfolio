@@ -19,6 +19,14 @@ The last pixel before the art is a blend of the two, which would leave a grey
 fringe against the map. So the border of the cut is re-scored: alpha there
 rises with how far the pixel has moved away from the backdrop tone.
 
+The sheets are also not on the grid their manifest claims. The four rows of
+facings were packed at whatever height each came out — 180px on one sheet,
+240px on the next — so a cut along 256px rows takes the top off one tower and
+hands it to the frame above. The rows are therefore found on the picture: the
+valleys of the opaque-pixel count down the sheet, of which there are always
+three between four rows. Each tower is then re-laid onto a true 256px grid,
+its base on a common line, and only then is anything decided per cell.
+
 Usage:
     python scripts/td_cutout.py <folder with crossbow/ cannon/ magic/ rocket/>
 
@@ -154,36 +162,121 @@ def checker(a):
 CELL = 256      # set from the manifest at startup
 
 
+def _reconstruct(seed, within):
+    """Grow seed through `within` until nothing more is reached."""
+    while True:
+        grown = _dilate(seed, 4) & within
+        if grown.sum() == seed.sum():
+            return grown
+        seed = grown
+
+
 def drop_stragglers(keep, neutral, cell=None):
     """
-    Throw away grey litter that is not attached to the tower.
+    Throw away whatever is in a cell but is not that cell's tower.
 
-    Some walled-in checker patches are solid enough to survive the opening, so
-    the last word belongs to connectivity: a tower always fills the bottom
-    middle of its cell, and everything the tower cannot be walked to from
-    there, and that has no colour of its own, is not part of it. Sparks and
-    muzzle flare are coloured, so they stay whether they touch or not.
+    Two kinds of intruder. Grey litter: walled-in checker patches solid enough
+    to survive the opening. And the neighbours: the generator did not keep
+    every tower inside its cell, so the top of the crystal in the row below
+    pokes up into this one, and a frame cut along the grid then shows a
+    second tower at its foot.
+
+    Connectivity settles both. A tower always fills the bottom middle of its
+    cell, so whatever can be walked to from there is the tower. Of the rest,
+    anything grey goes, and anything touching the cell's border goes — that
+    is where a neighbour comes in from. Coloured sparks floating clear of
+    both the tower and the border are the only thing left, and they stay.
     """
     cell = cell or CELL
     h, w = keep.shape
-    seed = np.zeros_like(keep)
+    base = np.zeros_like(keep)
+    rim = np.zeros_like(keep)
     for cy in range(0, h, cell):
         for cx in range(0, w, cell):
             y0, y1 = cy + int(cell * 0.58), cy + int(cell * 0.88)
             x0, x1 = cx + int(cell * 0.34), cx + int(cell * 0.66)
-            seed[y0:y1, x0:x1] = keep[y0:y1, x0:x1]
-    while True:
-        grown = _dilate(seed, 4) & keep
-        if grown.sum() == seed.sum():
+            base[y0:y1, x0:x1] = True
+            rim[cy, cx:cx + cell] = rim[cy + cell - 1, cx:cx + cell] = True
+            rim[cy:cy + cell, cx] = rim[cy:cy + cell, cx + cell - 1] = True
+
+    # the fill must not cross a cell border, or a tower would claim its
+    # neighbour's overflow as its own
+    walls = np.zeros_like(keep)
+    walls[::cell, :] = True
+    walls[:, ::cell] = True
+    inside = keep & ~walls
+
+    tower = _reconstruct(base & inside, inside)
+    rest = inside & ~tower
+    intruder = _reconstruct(rim & rest, rest)
+    return keep & ~walls & ~intruder & ~(rest & neutral)
+
+
+#: where a tower's base sits in its normalised cell, from the cell's top
+BASELINE = 236
+ROWS, COLS = 4, 6
+
+
+def row_bands(alpha, cell):
+    """
+    The four rows of facings, found on the picture rather than on a grid.
+
+    Count opaque pixels per line, smooth, and take the three deepest valleys
+    that sit at least half a cell apart: a flash may bridge two rows but it
+    is never as wide as a tower, so the gap between rows stays the low point.
+    Each band is then trimmed to its own content.
+    """
+    h = alpha.shape[0]
+    prof = alpha.sum(axis=1).astype(np.float64)
+    k = 9
+    prof = np.convolve(np.pad(prof, k // 2, mode="edge"), np.ones(k) / k, mode="valid")
+    mins = [y for y in range(1, h - 1) if prof[y] <= prof[y - 1] and prof[y] <= prof[y + 1]]
+    mins.sort(key=lambda y: prof[y])
+    cuts = []
+    for y in mins:
+        if cell * 0.4 < y < h - cell * 0.4 and all(abs(y - c) >= cell * 0.5 for c in cuts):
+            cuts.append(y)
+        if len(cuts) == ROWS - 1:
             break
-        seed = grown
-    return keep & ~(~seed & neutral)
+    if len(cuts) != ROWS - 1:
+        return [(r * cell, (r + 1) * cell) for r in range(ROWS)]
+    edges = [0] + sorted(cuts) + [h]
+    bands = []
+    for y0, y1 in zip(edges[:-1], edges[1:]):
+        counts = alpha[y0:y1].sum(axis=1)
+        rows = np.nonzero(counts > 4)[0]
+        if not rows.size:
+            bands.append((y0, y1))
+            continue
+        # the base is the bottom of the tower's mass, not of whatever litter
+        # or smoke trails below it: the last line still a fifth as wide as
+        # the widest one
+        solid = np.nonzero(counts >= counts.max() * 0.2)[0]
+        bands.append((y0 + int(rows[0]), y0 + int(solid[-1]) + 1))
+    return bands
+
+
+def normalise(rgba, cell):
+    """Re-lay every tower onto a true grid, base on a common line."""
+    h, w = rgba.shape[:2]
+    bands = row_bands(rgba[:, :, 3] > 12, cell)
+    out = np.zeros((ROWS * cell, COLS * cell, 4), dtype=np.uint8)
+    for r, (y0, y1) in enumerate(bands):
+        bh = min(y1 - y0, cell)
+        top = max(0, min(cell - bh, BASELINE - bh))
+        for c in range(COLS):
+            src = rgba[y1 - bh:y1, c * cell:(c + 1) * cell]
+            out[r * cell + top:r * cell + top + bh, c * cell:c * cell + src.shape[1]] = src
+    return out, bands
 
 
 def cut(path, cell=None):
     src = Image.open(path).convert("RGBA")
     if np.asarray(src)[:, :, 3].min() == 0:
-        return src            # two of the twelve arrived cut already
+        # two of the twelve arrived cut already, but not on the grid
+        rgba, bands = normalise(np.asarray(src).copy(), cell or CELL)
+        print(f"      rows at {', '.join(f'{a}-{b}' for a, b in bands)}")
+        return Image.fromarray(rgba, "RGBA")
 
     im = src.convert("RGB")
     a = np.asarray(im).astype(np.int16)
@@ -214,9 +307,14 @@ def cut(path, cell=None):
     edge &= ~bg
     alpha[edge] = np.clip(dist[edge] / FRINGE * 255, 0, 255)
 
-    alpha *= drop_stragglers(despeckle(alpha > 0), spread <= NEUTRAL, cell)
-    out = np.dstack([np.asarray(im), alpha.astype(np.uint8)])
-    return Image.fromarray(out, "RGBA")
+    alpha *= despeckle(alpha > 0)
+    rgba = np.dstack([np.asarray(im), alpha.astype(np.uint8)])
+    rgba, bands = normalise(rgba, cell or CELL)
+    neut = (rgba[:, :, :3].max(axis=2).astype(np.int16)
+            - rgba[:, :, :3].min(axis=2)) <= NEUTRAL
+    rgba[:, :, 3] *= drop_stragglers(rgba[:, :, 3] > 0, neut, cell)
+    print(f"      rows at {', '.join(f'{a}-{b}' for a, b in bands)}")
+    return Image.fromarray(rgba, "RGBA")
 
 
 def main():
