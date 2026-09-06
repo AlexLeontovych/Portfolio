@@ -24,7 +24,18 @@ import styles from "./platformer.module.css";
  * them to CSS as custom properties keeps that one rule in one place and lets
  * the stylesheet stay declarative.
  */
-const UI_BASE = "./games/platformer/ui";
+/**
+ * Where the pieces are, made absolute against the page rather than left
+ * relative.
+ *
+ * A relative url() inside a custom property is resolved against the
+ * STYLESHEET that reads it, not the element that carries it. In dev Vite
+ * serves its CSS from a <style> tag, whose base is the document, so a
+ * relative path is right and everything looked fine. In a build the CSS is a
+ * real file under assets/, so the same path asked for assets/games/... and
+ * every piece of the interface 404'd on the published site.
+ */
+const UI_BASE = new URL("games/platformer/ui", document.baseURI).href;
 const UI_VARS = {
   "--ui-panel": `url(${UI_BASE}/panel.png)`,
   "--ui-panel-dark": `url(${UI_BASE}/panel-dark.png)`,

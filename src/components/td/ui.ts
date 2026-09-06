@@ -8,7 +8,18 @@
  * its size or its path.
  */
 
-const B = "./games/td/ui";
+/**
+ * Where the pieces are, made absolute against the page rather than left
+ * relative.
+ *
+ * A relative url() inside a custom property is resolved against the
+ * STYLESHEET that reads it, not the element that carries it. In dev Vite
+ * serves its CSS from a <style> tag, whose base is the document, so a
+ * relative path is right and everything looked fine. In a build the CSS is a
+ * real file under assets/, so the same path asked for assets/games/... and
+ * every piece of the interface 404'd on the published site.
+ */
+const B = new URL("games/td/ui", document.baseURI).href;
 
 export const UI_VARS: Record<string, string> = {
   "--tdui-paper": `url(${B}/paper.png)`,

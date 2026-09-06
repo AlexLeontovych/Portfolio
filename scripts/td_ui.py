@@ -151,7 +151,14 @@ def main():
              ' * its size or its path.',
              ' */',
              '',
-             'const B = "./games/td/ui";',
+             '/**',
+             ' * Where the pieces are, made absolute against the page rather than',
+             ' * left relative. A relative url() inside a custom property is resolved',
+             ' * against the STYLESHEET that reads it, not the element that carries',
+             ' * it — and in a build that stylesheet sits under assets/, so a relative',
+             ' * path asks for assets/games/... and every piece 404s.',
+             ' */',
+             'const B = new URL("games/td/ui", document.baseURI).href;',
              '',
              'export const UI_VARS: Record<string, string> = {']
 

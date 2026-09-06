@@ -161,7 +161,8 @@ export default function Td() {
               // the map behind the menu is the one about to be played, so the
               // choice is made looking at the place rather than at a name
               "--td-map": LEVELS[level].map
-                ? `url(./games/td/maps/${MAPS[LEVELS[level].map as string].image})`
+                ? `url(${new URL(`games/td/maps/${MAPS[LEVELS[level].map as string].image}`,
+                                    document.baseURI).href})`
                 : "none",
             } as React.CSSProperties
           }
