@@ -58,8 +58,23 @@ const FALL_TIME = 0.8;
 const SWING_TIME = 0.9;
 /** Seconds before the barracks has another man ready. */
 const MUSTER_TIME = 9;
-/** How near the road a creep must come before the post's man takes it on. */
-const GRAB = 34;
+/**
+ * How far outside the ring a soldier will follow someone before letting go.
+ *
+ * What he takes on is anything inside the barracks' own range — the ring the
+ * player is shown when they select it. Measuring instead from the spot he
+ * stands on, with a reach of a few dozen units, is why he would watch a
+ * column walk past: the ring covers both roads on most of the crystal
+ * hollow's plots, but he only ever stood on one of them, and the other ran
+ * seventy to a hundred and eighty units away — outside anything he could
+ * touch. He held one road and ignored the other, in full view of a ring that
+ * said he was holding both.
+ *
+ * The leash keeps that honest in the other direction: a creep that walks out
+ * of the ring is let go rather than chased across the map, so he always comes
+ * back to the road he was posted on.
+ */
+const LEASH = 40;
 /** And how near the two of them stand while they fight. */
 const REACH = 13;
 /**
@@ -868,6 +883,7 @@ export class TdEngine {
    */
   private updateBarracks(t: Tower, dt: number) {
     const tier = TOWERS[t.id].tiers[t.tier];
+    const range = tier.range;
     const want = tier.soldiers ?? 0;
     const path = this.level.paths[t.lane] ?? this.level.path;
     const gate = this.gateOf(t);
@@ -904,14 +920,32 @@ export class TdEngine {
 
       // whoever he was holding may have died, or been taken by someone else
       if (s.target && (s.target.dead || s.target.blocker !== s)) s.target = null;
+      // ...and anyone he is holding who has walked out of the ring is let go
+      if (s.target) {
+        const p = this.creepPos(s.target);
+        if (Math.hypot(p.x - t.x, p.y - t.y) > range + LEASH) {
+          s.target.blocker = null;
+          s.target = null;
+        }
+      }
       if (!s.target) {
+        // the nearest of whatever is inside the ring, so a squad meets the
+        // front of a column rather than all running at the same straggler
+        let pick: Creep | null = null;
+        let best = Infinity;
         for (const c of this.creeps) {
           if (c.dead || c.blocker || c.def.flying || c.def.ignoresBlockers) continue;
           const p = this.creepPos(c);
-          if (Math.hypot(p.x - s.hx, p.y - s.hy) > GRAB) continue;
-          c.blocker = s;
-          s.target = c;
-          break;
+          if (Math.hypot(p.x - t.x, p.y - t.y) > range) continue;
+          const d = Math.hypot(p.x - s.x, p.y - s.y);
+          if (d < best) {
+            best = d;
+            pick = c;
+          }
+        }
+        if (pick) {
+          pick.blocker = s;
+          s.target = pick;
         }
       }
 
