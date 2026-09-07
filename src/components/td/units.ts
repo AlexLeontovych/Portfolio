@@ -264,11 +264,11 @@ export interface SpellDef {
 export const SPELLS: Record<SpellId, SpellDef> = {
   fireball: {
     name: "Fireball", sheet: "fireball.webp", gold: 90, cooldown: 22,
-    radius: 74, damage: 120, kind: "magic", strike: 0.42,
+    radius: 74, damage: 70, kind: "magic", strike: 0.42,
   },
   arrows: {
     name: "Arrow Rain", sheet: "arrow_rain.webp", gold: 70, cooldown: 18,
-    radius: 84, damage: 150, kind: "physical", over: 1.1, strike: 0.25,
+    radius: 84, damage: 95, kind: "physical", over: 1.1, strike: 0.25,
   },
   heal: {
     name: "Healing Aura", sheet: "healing_aura.webp", gold: 60, cooldown: 16,

@@ -94,6 +94,16 @@ const LEASH = 40;
 /** And how near the two of them stand while they fight. */
 const REACH = 13;
 /**
+ * How near a soldier has to be before the creep he has claimed will stop.
+ *
+ * The claim is made across the whole ring, so a creep could be marked as
+ * somebody's fight while that somebody was still half a screen away and
+ * walking. It stopped where it stood and swung at open air until he arrived.
+ * The claim reserves a creep — it does not hold him. What holds him is
+ * contact, and this is what contact means.
+ */
+const GRAPPLE = REACH + 7;
+/**
  * The slack on that, and on a post: how near counts as arrived.
  *
  * A soldier's step is capped at exactly the distance left, so he lands ON the
@@ -945,9 +955,16 @@ export class TdEngine {
         continue;
       }
 
-      // a blocked creep stands and swings instead of advancing
+      // a creep in a fight stands and swings instead of advancing. Only
+      // once his man is actually on him, though: until then he is spoken for
+      // and keeps walking, and the two of them close the gap between them
       if (c.blocker && (c.blocker.dead || c.blocker.hp <= 0)) c.blocker = null;
-      if (c.blocker) {
+      const here = c.blocker ? this.creepPos(c) : null;
+      if (c.blocker && here &&
+          Math.hypot(c.blocker.x - here.x, c.blocker.y - here.y) <= GRAPPLE) {
+        // and he turns to meet him. The sheets are drawn facing right, so
+        // which way he faces is which side of him the soldier is standing on
+        c.face = c.blocker.x >= here.x ? 1 : -1;
         c.swing -= dt;
         // The attack sheets do not loop, and their last frame is the follow
         // through — a great white arc of a sword swing on most of them. Asking
@@ -1423,9 +1440,13 @@ export class TdEngine {
       this.drawDecor(ctx, pal);
     }
     this.drawSlots(ctx, pal, !!bg);
-    this.drawTowers(ctx);
     this.drawSoldiers(ctx, true);      // the fallen, under everyone's boots
     this.drawActors(ctx);              // the living and the map's foreground
+    // A building is taller than anyone standing at it, and both of ours are
+    // drawn from their base up. Sorting them into the crowd by that base put
+    // a mushroom's head through a roof it was walking behind; a keep is a
+    // solid thing, so it goes over whoever is at its door
+    this.drawTowers(ctx);
     this.drawBars(ctx);
     // the gate facades go over whoever is walking through them
     const gates = this.level.overlay ? this.maps[this.level.overlay] : undefined;
