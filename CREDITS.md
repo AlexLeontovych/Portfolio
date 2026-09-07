@@ -120,6 +120,13 @@ the pieces the interface draws, assembles each one's nine parts into a nine-slic
 it to the size it is drawn at — `public/games/td/ui/`, 78 kB for the lot. That is a game carrying
 its skin rather than a pack being republished.
 
+## Sound — EMBERWOOD platformer
+
+Nothing here to credit: the platformer's sound has no assets at all. Every effect and the
+music are oscillators and noise bursts written out in `src/components/platformer/audio.ts` —
+about four kilobytes of code where a sample pack would be a megabyte, and the reason the card
+for this game says "synthesised sound". The other two games buy their sound; this one makes it.
+
 ## UI — EMBERWOOD platformer
 
 The platformer's interface skin (`public/games/platformer/ui/`) is generated for this project —

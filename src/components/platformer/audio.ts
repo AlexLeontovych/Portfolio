@@ -7,7 +7,10 @@
  * a number here instead of a round trip through an audio editor.
  */
 
+import { sound } from "../../lib/muted";
+
 type Voice = "jump" | "land" | "swing" | "hitEnemy" | "hurt" | "coin" | "heart"
+  | "step" | "enemySwing" | "block"
   | "kill" | "spear" | "charge" | "slam" | "die" | "clear" | "select"
   | "dash" | "pogo" | "throw" | "checkpoint"
   | "bossCast" | "bossHurt" | "bossDie";
@@ -20,11 +23,10 @@ export class GameAudio {
   private musicGain: GainNode | null = null;
   private musicTimer: number | null = null;
   private step = 0;
-  private _muted = false;
   private track: "calm" | "tense" | "boss" = "calm";
 
-  get muted() {
-    return this._muted;
+  private get _muted() {
+    return sound.muted();
   }
 
   /** Must be called from a user gesture — browsers refuse audio otherwise. */
@@ -44,7 +46,6 @@ export class GameAudio {
   }
 
   setMuted(m: boolean) {
-    this._muted = m;
     if (this.master && this.ctx) {
       this.master.gain.setTargetAtTime(m ? 0 : 0.55, this.ctx.currentTime, 0.05);
     }
@@ -118,6 +119,20 @@ export class GameAudio {
         break;
       case "land":
         this.noise(0.08, 0.16, 120, 1400);
+        break;
+      case "step":
+        // quiet, dull and short: heard as a rhythm under the running rather
+        // than as a sound in its own right
+        this.noise(0.045, 0.05, 90, 900);
+        break;
+      case "enemySwing":
+        // the same shape as the hero's swing, pitched down and softened —
+        // what it has to say is "something is about to hit you"
+        this.noise(0.16, 0.13, 260, 2200);
+        break;
+      case "block":
+        this.tone(1400, 0.09, "square", 0.13, 900);
+        this.noise(0.1, 0.16, 2200, 9000);
         break;
       case "swing":
         this.noise(0.13, 0.2, 700, 5200);
@@ -213,7 +228,7 @@ export class GameAudio {
   }
 
   setTrack(track: "calm" | "tense" | "boss") {
-    if (this.track === track) return;
+    if (this.track === track && this.musicTimer !== null) return;
     this.stopMusic();
     this.startMusic(track);
   }

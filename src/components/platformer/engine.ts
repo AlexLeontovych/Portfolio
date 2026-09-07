@@ -353,6 +353,8 @@ export class PlatformerEngine {
   private ctx: CanvasRenderingContext2D;
   private hooks: EngineHooks;
   readonly audio = new GameAudio();
+  /** pixels run since the last footfall */
+  private stepDist = 0;
 
   private heroId: HeroId = "huntress";
   private heroSet: AnimSet | null = null;
@@ -938,6 +940,18 @@ export class PlatformerEngine {
       if (!p.onGround) p.state = p.vy < 0 ? "jump" : "fall";
       else p.state = Math.abs(p.vx) > 18 ? "run" : "idle";
     }
+
+    // a footfall every so many pixels of ground covered, which keeps the
+    // rhythm tied to how fast he is actually moving rather than to a timer
+    if (p.state === "run" && p.onGround) {
+      this.stepDist += Math.abs(p.vx) * dt;
+      if (this.stepDist > 26) {
+        this.stepDist = 0;
+        this.audio.play("step");
+      }
+    } else {
+      this.stepDist = 0;
+    }
     p.anim.play(
       p.state === "attack" ? ATTACKS[p.attack ?? "light"].anim
       : p.state === "hurt" ? "hit"
@@ -1028,6 +1042,7 @@ export class PlatformerEngine {
       if (!overlaps(hx, hy, a.w, a.h, e.x, e.y, e.w, e.h)) continue;
       const facingUs = Math.sign(p.x - e.x) === e.face;
       const guarded = e.state === "guard" && facingUs;
+      if (guarded) this.audio.play("block");
       this.damageEnemy(e, guarded ? a.dmg * 0.25 : a.dmg, p.face, a.knock * (guarded ? 0.2 : 1));
       hit = true;
     }
@@ -1181,6 +1196,7 @@ export class PlatformerEngine {
           e.state = "attack";
           e.didHit = false;
           e.anim.play("attack", true);
+          this.audio.play("enemySwing");
         } else if (
           st.ranged &&
           e.rangedCd <= 0 &&

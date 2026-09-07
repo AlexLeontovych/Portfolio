@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "../../i18n/I18nContext";
 import { platformer, usePlatformerOpen } from "../../lib/platformerStore";
+import { sound, useMuted } from "../../lib/muted";
 import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 import { Close, Sound, Muted } from "../Icons";
 import { LEVELS } from "./level";
@@ -151,7 +152,7 @@ export default function Platformer() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [hud, setHud] = useState<Hud | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
-  const [muted, setMuted] = useState(false);
+  const muted = useMuted();
   const [startLevel, setStartLevel] = useState(0);
   const unlocked = useMemo(() => (open ? platformer.unlocked() : 0), [open, screen]);
 
@@ -174,6 +175,10 @@ export default function Platformer() {
   }, [open]);
 
   /* ------------------------------- engine life ------------------------------ */
+
+  useEffect(() => {
+    engineRef.current?.audio.setMuted(muted);
+  }, [muted]);
 
   const boot = useCallback(
     async (heroId: HeroId, level: number) => {
@@ -305,6 +310,14 @@ export default function Platformer() {
       role="dialog"
       aria-modal="true"
       aria-label="EMBERWOOD"
+      // one listener for every button in here rather than ten handlers: the
+      // panels are all pause, death and level-clear, and every button on
+      // them wants the same tick
+      onPointerDown={(e) => {
+        if ((e.target as HTMLElement).closest("button")) {
+          engineRef.current?.audio.play("select");
+        }
+      }}
     >
       <canvas ref={canvasRef} className={styles.canvas} data-hidden={screen !== "game"} />
 
@@ -320,11 +333,7 @@ export default function Platformer() {
       <button
         type="button"
         className={styles.mute}
-        onClick={() => {
-          const next = !muted;
-          setMuted(next);
-          engineRef.current?.audio.setMuted(next);
-        }}
+        onClick={() => sound.toggle()}
         aria-pressed={muted}
         aria-label={t("plat.sound")}
         title={t("plat.sound")}
