@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useI18n } from "../../i18n/I18nContext";
 import { platformer, usePlatformerOpen } from "../../lib/platformerStore";
 import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-import { Close } from "../Icons";
+import { Close, Sound, Muted } from "../Icons";
 import { LEVELS } from "./level";
 import { PlatformerEngine, type Action, type Hud, type Phase, type Toast } from "./engine";
 import { Animator, HERO_INFO, HERO_SHEETS, loadAnimSet, type HeroId } from "./sprites";
@@ -329,7 +329,7 @@ export default function Platformer() {
         aria-label={t("plat.sound")}
         title={t("plat.sound")}
       >
-        {muted ? "🔇" : "🔊"}
+        {muted ? <Muted /> : <Sound />}
       </button>
 
       {/* ------------------------------ hero select ----------------------------- */}

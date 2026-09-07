@@ -69,6 +69,28 @@ export const Close = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+/**
+ * Sound on and sound off, drawn in the same hand as the rest of the set.
+ *
+ * The games' sound button carried the system emoji, which arrives in whatever
+ * colour and shape the reader's platform feels like and sat beside a drawn
+ * cross that does not.
+ */
+export const Sound = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M4 9.5h3L12 6v12L7 14.5H4z" />
+    <path d="M15.5 9.8a3.6 3.6 0 0 1 0 4.4" />
+    <path d="M18 7.4a7 7 0 0 1 0 9.2" />
+  </svg>
+);
+
+export const Muted = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M4 9.5h3L12 6v12L7 14.5H4z" />
+    <path d="m16 9.8 5 4.4M21 9.8l-5 4.4" />
+  </svg>
+);
+
 export const Search = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <circle cx="11" cy="11" r="7" />
