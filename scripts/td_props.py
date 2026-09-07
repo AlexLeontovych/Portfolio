@@ -161,12 +161,15 @@ def cut(mid, data):
     a = np.asarray(board, dtype=np.uint8)
     layer = np.zeros((H, W, 4), dtype=np.uint8)
 
-    chosen = chosen_by_sheet(mid)
-    if chosen is None:
+    # a map that names its own boxes means those and nothing else; the drawn
+    # sheet is what answers when it names none
+    if boxes:
         chosen = np.zeros((H, W), dtype=bool)
         for box in boxes:
             x0, y0, x1, y1 = [int(v) for v in box]
             chosen[max(0, y0):y1, max(0, x0):x1] = True
+    else:
+        chosen = chosen_by_sheet(mid)
     # generous in the choosing, exact in the cutting: the road is what a piece
     # must never take, because there it would be a wall across the way
     chosen = fa._dilate(chosen, SLOP) & ~road & reach
