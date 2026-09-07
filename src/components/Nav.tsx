@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "../i18n/I18nContext";
 import { useMotionPref } from "../hooks/useMotionPref";
 import { lockScroll, unlockScroll } from "../lib/scrollLock";
@@ -101,24 +102,37 @@ export default function Nav() {
         </div>
       </div>
 
-      <div
-        id="mobile-menu"
-        ref={panelRef}
-        className={`${styles.mobile} ${open ? styles.mobileOpen : ""}`}
-        hidden={!open}
-      >
-        <button className={styles.mobileClose} onClick={() => setOpen(false)} aria-label={t("works.close")}>
-          <Close />
-        </button>
-        <nav aria-label="Mobile">
-          {SECTIONS.map((id, i) => (
-            <a key={id} href={`#${id}`} className={styles.mobileLink} onClick={() => setOpen(false)}>
-              <span className={styles.mobileIdx}>0{i + 1}</span>
-              {t(`nav.${id}`)}
-            </a>
-          ))}
-        </nav>
-      </div>
+      {/*
+        * The panel hangs off the body, not off this header.
+        *
+        * The header is fixed with a z-index of its own, which makes it a
+        * stacking context, and everything inside it is sealed into that
+        * context however high its own z-index goes. Several things on the
+        * page sit at 1200 — the games, the arcade — so on a phone, where the
+        * panel is the only way to navigate, the page was drawn straight
+        * through the open menu.
+        */}
+      {createPortal(
+        <div
+          id="mobile-menu"
+          ref={panelRef}
+          className={`${styles.mobile} ${open ? styles.mobileOpen : ""}`}
+          hidden={!open}
+        >
+          <button className={styles.mobileClose} onClick={() => setOpen(false)} aria-label={t("works.close")}>
+            <Close />
+          </button>
+          <nav aria-label="Mobile">
+            {SECTIONS.map((id, i) => (
+              <a key={id} href={`#${id}`} className={styles.mobileLink} onClick={() => setOpen(false)}>
+                <span className={styles.mobileIdx}>0{i + 1}</span>
+                {t(`nav.${id}`)}
+              </a>
+            ))}
+          </nav>
+        </div>,
+        document.body,
+      )}
     </header>
   );
 }
