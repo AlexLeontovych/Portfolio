@@ -30,11 +30,17 @@ far from the colour the road has just there, and it stops where the painter
 stopped it. Subtracting that from a roughly drawn box leaves an edge along
 the road that is exact, which is the only place exactness shows.
 
+WHICH things stand in front is the one thing the map cannot say, and it comes
+from outside: a redrawn foreground per map under art-src/td/foreground, whose
+opaque pixels are read as a mask and nothing else. Those drafts have no exact
+registration and do not need any — they only ever CHOOSE, generously, and
+what is drawn is cut from the real map at the real map's coordinates. Where
+there is no such sheet, the boxes in "props" do the choosing instead.
+
 Usage:
     python scripts/td_props.py [map id ...]
 
-Reads the boxes from art-src/td/maps.json ("props"), writes
-public/games/td/maps/<id>.props.webp and the pieces into the map data.
+Writes public/games/td/maps/<id>.props.webp and the pieces into the map data.
 """
 import json
 import os
@@ -56,7 +62,11 @@ EDGE = 26
 #: and this far from the colour the road has locally is something else
 TOL = 74
 #: a piece smaller than this is a speck of kerb, not a thing to hide behind
-SPECK = 90
+SPECK = 260
+#: how much the chosen shapes are grown, to cover a draft drawn a little off
+SLOP = 4
+#: a thing further than this from any way can never be in front of anybody
+NEAR = 54
 
 
 def stamp(pts, half):
@@ -93,34 +103,66 @@ def road_region(under, ways):
     return fa.close(cur, 2)
 
 
-def cut(mid):
+def chosen_by_sheet(mid):
+    """The foreground drawn for this map, if one was supplied."""
+    p = os.path.join(ART, "foreground", f"{mid}.webp")
+    if not os.path.exists(p):
+        return None
+    sheet = Image.open(p).convert("RGBA").resize((W, H), Image.LANCZOS)
+    return np.asarray(sheet)[:, :, 3] > 40
+
+
+def parts(mask):
+    """One piece per thing, each big enough to be worth hiding behind."""
+    left = mask.copy()
+    out = []
+    while left.any():
+        ys, xs = np.nonzero(left)
+        seed = np.zeros(mask.shape, dtype=bool)
+        seed[ys[0], xs[0]] = True
+        cur = seed
+        while True:
+            nxt = fa._dilate(cur, 2) & left
+            if nxt.sum() == cur.sum():
+                break
+            cur = nxt
+        left &= ~cur
+        if cur.sum() >= SPECK:
+            out.append(cur)
+    return out
+
+
+def cut(mid, data):
     src = os.path.join(ART, "maps", f"{mid}.webp")
     board = Image.open(src).convert("RGB").resize((W, H), Image.LANCZOS)
-    data = json.load(open(os.path.join(ART, "maps.json"), encoding="utf-8"))
     m = data[mid]
     boxes = m.get("props") or []
-    if not boxes:
+    if not boxes and chosen_by_sheet(mid) is None:
         print(f"  {mid}: nothing marked to stand in front")
         m.pop("props", None)
         m.pop("pieces", None)
-        return data, None
+        return None
 
     ways = [m["road"]] + m.get("branches", [])
     road = road_region(board, ways)
+    reach = np.zeros((H, W), dtype=bool)
+    for way in ways:
+        reach |= stamp(way, NEAR)
     a = np.asarray(board, dtype=np.uint8)
     layer = np.zeros((H, W, 4), dtype=np.uint8)
+
+    chosen = chosen_by_sheet(mid)
+    if chosen is None:
+        chosen = np.zeros((H, W), dtype=bool)
+        for box in boxes:
+            x0, y0, x1, y1 = [int(v) for v in box]
+            chosen[max(0, y0):y1, max(0, x0):x1] = True
+    # generous in the choosing, exact in the cutting: the road is what a piece
+    # must never take, because there it would be a wall across the way
+    chosen = fa._dilate(chosen, SLOP) & ~road & reach
+
     pieces = []
-    for box in boxes:
-        x0, y0, x1, y1 = [int(v) for v in box]
-        keep = np.zeros((H, W), dtype=bool)
-        keep[max(0, y0):y1, max(0, x0):x1] = True
-        keep &= ~road
-        # a kerb stone caught at the edge of the box is not a thing to hide
-        # behind, and its foot would drag the whole piece's ground line down
-        keep = fa._dilate(~fa._dilate(~keep, 1), 1)
-        if keep.sum() < SPECK:
-            print(f"  !! {mid}: the box {box} holds nothing but road")
-            continue
+    for keep in parts(chosen):
         ys, xs = np.nonzero(keep)
         layer[keep, :3] = a[keep]
         layer[keep, 3] = 255
@@ -130,17 +172,20 @@ def cut(mid):
             # the ground it stands on: its lowest pixel
             "base": int(ys.max()),
         })
+    pieces.sort(key=lambda p: p["base"])
     m["pieces"] = pieces
     print(f"  {mid}: {len(pieces)} piece(s) in front, "
           f"{int((layer[:, :, 3] > 0).sum())} px, road {road.mean() * 100:.1f}% of the board")
-    return data, Image.fromarray(layer, "RGBA")
+    return Image.fromarray(layer, "RGBA")
 
 
 def main():
     ids = sys.argv[1:] or ["oasis", "canyon", "crystal", "frost", "forge"]
-    data = None
+    # one read, one write: cutting each map from its own copy of the file
+    # meant only the last map's pieces were ever kept
+    data = json.load(open(os.path.join(ART, "maps.json"), encoding="utf-8"))
     for mid in ids:
-        data, layer = cut(mid)
+        layer = cut(mid, data)
         dst = os.path.join(OUT, f"{mid}.props.webp")
         if layer is None:
             if os.path.exists(dst):
@@ -149,7 +194,7 @@ def main():
         os.makedirs(OUT, exist_ok=True)
         layer.resize((1280, 720), Image.LANCZOS).save(dst, "WEBP", quality=92, method=6)
         print(f"        {os.path.getsize(dst) / 1024:.0f} kB")
-    if data is not None:
+    if True:
         json.dump(data, open(os.path.join(ART, "maps.json"), "w", encoding="utf-8"), indent=1)
         print("  now run scripts/td_maps.py")
 
