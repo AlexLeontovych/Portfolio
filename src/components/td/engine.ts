@@ -1255,9 +1255,8 @@ export class TdEngine {
     this.drawSlots(ctx, pal, !!bg);
     this.drawTowers(ctx);
     this.drawSoldiers(ctx, true);      // the fallen, under everyone's boots
-    this.drawCreeps(ctx);
-    this.drawSoldiers(ctx, false);
-    this.drawProps(ctx);
+    this.drawActors(ctx);              // the living and the map's foreground
+    this.drawBars(ctx);
     // the gate facades go over whoever is walking through them
     const gates = this.level.overlay ? this.maps[this.level.overlay] : undefined;
     if (gates) ctx.drawImage(gates, 0, 0, BOARD.w, BOARD.h);
@@ -1596,11 +1595,8 @@ export class TdEngine {
     ctx.restore();
   }
 
-  private drawCreeps(ctx: CanvasRenderingContext2D) {
-    // draw the ones further down the road last, so they overlap correctly
-    const order = [...this.creeps].sort((a, b) => a.dist - b.dist);
-    for (const c of order) {
-      const p = this.creepPos(c);
+  private drawCreep(ctx: CanvasRenderingContext2D, c: Creep, p: Point) {
+    {
       ctx.save();
       ctx.globalAlpha = c.dead ? Math.max(0, 1 - c.dying / 1.1) : 1;
       ctx.fillStyle = "rgba(0,0,0,0.28)";
@@ -1616,16 +1612,65 @@ export class TdEngine {
       }
       ctx.filter = "none";
       ctx.restore();
+    }
+  }
 
-      if (!c.dead && c.hp < c.maxHp) {
-        const w = c.def.boss ? 60 : 26;
-        const y = p.y - (c.def.boss ? 62 : 34);
-        ctx.fillStyle = "rgba(6,12,20,0.8)";
-        ctx.fillRect(p.x - w / 2, y, w, 5);
-        ctx.fillStyle = c.def.boss ? "#ff2e88" : "#7ee06a";
-        ctx.fillRect(p.x - w / 2 + 1, y + 1, (w - 2) * Math.max(0, c.hp / c.maxHp), 3);
+  /** Every health bar, after everything, so nothing is ever drawn across one. */
+  private drawBars(ctx: CanvasRenderingContext2D) {
+    for (const c of this.creeps) {
+      if (c.dead || c.hp >= c.maxHp) continue;
+      const p = this.creepPos(c);
+      const w = c.def.boss ? 60 : 26;
+      const y = p.y - (c.def.boss ? 62 : 34);
+      ctx.fillStyle = "rgba(6,12,20,0.8)";
+      ctx.fillRect(p.x - w / 2, y, w, 5);
+      ctx.fillStyle = c.def.boss ? "#ff2e88" : "#7ee06a";
+      ctx.fillRect(p.x - w / 2 + 1, y + 1, (w - 2) * Math.max(0, c.hp / c.maxHp), 3);
+    }
+    for (const t of this.towers) {
+      for (const s of t.soldiers) if (!s.dead) this.drawSoldierHp(ctx, s);
+    }
+  }
+
+  /**
+   * Creeps, the garrison and the map's foreground, in the order they stand.
+   *
+   * All three are things on the same ground, so all three sort the same way:
+   * whoever stands further down the board is in front, and the pieces cut out
+   * of the map carry the line they stand on for exactly this. Sorting them
+   * together is the whole of it — a gate is simply something standing at the
+   * gate's own line, and a creep that has walked past it is drawn after.
+   *
+   * The first attempt punched a hole in each piece around every creep in
+   * front of it, which left a rectangle missing out of the gate whenever
+   * anything walked by. Order costs nothing and takes nothing out.
+   */
+  private drawActors(ctx: CanvasRenderingContext2D) {
+    const items: { y: number; go: () => void }[] = [];
+    for (const c of this.creeps) {
+      const p = this.creepPos(c);
+      items.push({ y: p.y, go: () => this.drawCreep(ctx, c, p) });
+    }
+    for (const t of this.towers) {
+      for (const s of t.soldiers) {
+        if (s.dead) continue;
+        items.push({ y: s.y, go: () => this.drawSoldier(ctx, t, s) });
       }
     }
+    const img = this.level.props ? this.maps[this.level.props] : undefined;
+    if (img) {
+      const sx = img.naturalWidth / BOARD.w;
+      const sy = img.naturalHeight / BOARD.h;
+      for (const p of this.level.pieces) {
+        items.push({
+          y: p.base,
+          go: () => ctx.drawImage(img, p.x * sx, p.y * sy, p.w * sx, p.h * sy,
+                                  p.x, p.y, p.w, p.h),
+        });
+      }
+    }
+    items.sort((a, b) => a.y - b.y);
+    for (const it of items) it.go();
   }
 
   /**
@@ -1637,9 +1682,17 @@ export class TdEngine {
    */
   private drawSoldiers(ctx: CanvasRenderingContext2D, fallen: boolean) {
     for (const t of this.towers) {
-      const squad = SQUAD[t.tier] ?? SQUAD[0];
       for (const s of t.soldiers) {
         if (s.dead !== fallen) continue;
+        this.drawSoldier(ctx, t, s);
+      }
+    }
+  }
+
+  private drawSoldier(ctx: CanvasRenderingContext2D, t: Tower, s: Soldier) {
+    {
+      {
+        const squad = SQUAD[t.tier] ?? SQUAD[0];
         const face = FACING[(Math.round(s.angle / (Math.PI / 2)) + 4) % 4];
         const frame =
           s.action === "attack" ? Math.min(5, Math.floor((1 - s.swing / SWING_TIME) * 6)) :
@@ -1659,11 +1712,10 @@ export class TdEngine {
         if (drawSprite(ctx, this.atlas, `s.${squad}.${s.action}.${face}`, s.x, s.y, {
           frame, alpha: s.dead ? 0.85 : 1,
         })) {
-          if (!s.dead) this.drawSoldierHp(ctx, s);
-          continue;
+          return;
         }
 
-        if (s.dead) continue;
+        if (s.dead) return;
         ctx.save();
         ctx.fillStyle = "rgba(0,0,0,0.25)";
         ctx.beginPath();
@@ -1676,7 +1728,6 @@ export class TdEngine {
         ctx.fillStyle = "#c6d831";
         ctx.fillRect(s.x + 5, s.y - 16, 3, 16);
         ctx.restore();
-        this.drawSoldierHp(ctx, s);
       }
     }
   }
@@ -1688,50 +1739,6 @@ export class TdEngine {
     ctx.fillRect(s.x - 10, s.y - 34, 20, 4);
     ctx.fillStyle = "#6ad0ff";
     ctx.fillRect(s.x - 9, s.y - 33, 18 * f, 2);
-  }
-
-  /**
-   * The things a creep walks behind, drawn over whoever is behind them.
-   *
-   * The map is one flat picture, so the gate a creep comes out of, the
-   * trestle it passes under and the ore cart hanging over the track were all
-   * behind it. Each piece was cut with the line it stands on recorded, and a
-   * creep standing further DOWN the board than that line is in front of it.
-   *
-   * So the piece is painted over everything except those, and "except those"
-   * is a clip: the piece's own rectangle with theirs punched out of it by the
-   * even-odd rule. That leaves the drawing order alone — no sorting the world
-   * by depth every frame — and costs one path per piece.
-   */
-  private drawProps(ctx: CanvasRenderingContext2D) {
-    const img = this.level.props ? this.maps[this.level.props] : undefined;
-    const pieces = this.level.pieces;
-    if (!img || !pieces.length) return;
-    const sx = img.naturalWidth / BOARD.w;
-    const sy = img.naturalHeight / BOARD.h;
-    for (const p of pieces) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(p.x, p.y, p.w, p.h);
-      let cut = false;
-      for (const c of this.creeps) {
-        if (c.dead) continue;
-        const q = this.creepPos(c);
-        if (q.y <= p.base || q.x < p.x - 24 || q.x > p.x + p.w + 24) continue;
-        ctx.rect(q.x - 22, q.y - 44, 44, 48);
-        cut = true;
-      }
-      for (const t of this.towers) {
-        for (const s of t.soldiers) {
-          if (s.dead || s.y <= p.base || s.x < p.x - 24 || s.x > p.x + p.w + 24) continue;
-          ctx.rect(s.x - 22, s.y - 44, 44, 48);
-          cut = true;
-        }
-      }
-      ctx.clip(cut ? "evenodd" : "nonzero");
-      ctx.drawImage(img, p.x * sx, p.y * sy, p.w * sx, p.h * sy, p.x, p.y, p.w, p.h);
-      ctx.restore();
-    }
   }
 
   private drawShots(ctx: CanvasRenderingContext2D) {
