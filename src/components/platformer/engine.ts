@@ -63,6 +63,32 @@ const DASH_IFRAMES = 0.26;
 /** How hard a down-thrust kicks you back up off whatever you landed on. */
 const POGO_BOUNCE = 640;
 
+/**
+ * How long an enemy takes to act on what he can see.
+ *
+ * Without this he turned on the frame you crossed him and started walking on
+ * the same one, which is the difference between fighting a creature and
+ * fighting a subscription to your coordinates. The delay is re-rolled every
+ * time he loses you and every time he turns, so two of them never move
+ * together and none of them move the instant you do.
+ */
+const REACT = 0.18;
+const REACT_VAR = 0.34;
+/** And how long after turning round before he is any use again. */
+const TURN = 0.14;
+const TURN_VAR = 0.22;
+/**
+ * How wide a thrown weapon may miss by, in world units, at no range at all
+ * and per unit of distance on top.
+ *
+ * A shot used to leave with the player's exact position solved into it, so
+ * standing still anywhere in the arc's reach was fatal and standing still
+ * out of it was free. Now the far ones are worth dodging and the near ones
+ * are worth respecting.
+ */
+const SPREAD = 10;
+const SPREAD_PER_UNIT = 0.06;
+
 const IFRAMES = 1.05;
 const HURT_LOCK = 0.28;
 const HURT_KNOCK = 230;
@@ -178,6 +204,8 @@ interface Enemy extends Body {
   dying: number;
   hitFlash: number;
   didHit: boolean;
+  /** seconds before he may next react: notice you, or turn to face you */
+  react: number;
   homeY: number;
   bob: number;
 }
@@ -596,6 +624,7 @@ export class PlatformerEngine {
       cooldown: Math.random() * 0.8,
       rangedCd: 1.2 + Math.random() * 2,
       guardCd: 2 + Math.random() * 2,
+      react: 0,
       dying: 0,
       hitFlash: 0,
       didHit: false,
@@ -1178,9 +1207,12 @@ export class PlatformerEngine {
       } else if (e.state === "attack") {
         e.vx *= 0.8;
         const pr = e.anim.progress;
-        if (!e.didHit && pr > 0.35 && pr < 0.72) {
+        // the blow lands on the blow, not across the whole animation: a
+        // third of a second of live hit box caught anyone who walked past
+        // during the follow-through as surely as the man it was aimed at
+        if (!e.didHit && pr > 0.4 && pr < 0.56) {
           const hx = e.x + e.face * st.range * 0.7;
-          if (overlaps(hx, e.y, st.range * 1.5, e.h + 10, p.x, p.y, p.w, p.h)) {
+          if (overlaps(hx, e.y, st.range * 1.15, e.h + 6, p.x, p.y, p.w, p.h)) {
             this.hurtPlayer(st.touch, Math.sign(e.x - p.x) || 1);
             e.didHit = true;
           }
@@ -1189,10 +1221,21 @@ export class PlatformerEngine {
           e.state = "chase";
           e.cooldown = st.guards ? 1.5 : 0.9;
         }
+      } else if (sees && e.react > 0) {
+        // he has seen you and has not acted on it yet
+        e.react -= dt;
+        e.vx *= 0.85;
+        e.state = "chase";
       } else if (sees) {
         e.state = "chase";
-        e.face = dx > 0 ? 1 : -1;
-        if (dist < st.range && e.cooldown <= 0) {
+        const want: 1 | -1 = dx > 0 ? 1 : -1;
+        if (want !== e.face) {
+          // caught out: turning round costs him a moment, which is what
+          // jumping over an enemy is supposed to buy you
+          e.face = want;
+          e.react = TURN + Math.random() * TURN_VAR;
+          e.vx *= 0.5;
+        } else if (dist < st.range && e.cooldown <= 0) {
           e.state = "attack";
           e.didHit = false;
           e.anim.play("attack", true);
@@ -1221,6 +1264,8 @@ export class PlatformerEngine {
         }
       } else {
         e.state = "patrol";
+        // a fresh reaction time, banked against the next time he sees you
+        e.react = REACT + Math.random() * REACT_VAR;
         if (st.flies) {
           e.bob += dt * 2;
           e.vx = e.face * st.speed * 0.4;
@@ -1232,12 +1277,22 @@ export class PlatformerEngine {
 
       if (!st.flies) {
         e.vy = Math.min(MAX_FALL, e.vy + GRAVITY * dt);
+        // A ledge stops him where he stands. The check used to run after the
+        // move and only turn a patrol round, so anyone chasing walked
+        // straight off the platform he was posted on — and a level you had
+        // not reached yet was already empty, its guards in the pit below.
+        // Knockback is exempt: being hit off a ledge is the player's doing
+        const walking = e.state === "patrol" || e.state === "chase";
+        const step = Math.sign(e.vx);
+        if (walking && step !== 0 && e.onGround
+            && !floorAhead(this.level, e.x + step * (e.w / 2 + 6), e.y + e.h / 2)) {
+          e.vx = 0;
+          if (e.state === "patrol") e.face = e.face === 1 ? -1 : 1;
+        }
         const before = e.x;
         moveBody(this.level, e, dt, false);
         const blocked = e.vx !== 0 && Math.abs(e.x - before) < Math.abs(e.vx * dt) * 0.5;
-        const edge =
-          e.onGround && !floorAhead(this.level, e.x + e.face * (e.w / 2 + 6), e.y + e.h / 2);
-        if ((blocked || edge) && e.state === "patrol") e.face = e.face === 1 ? -1 : 1;
+        if (blocked && e.state === "patrol") e.face = e.face === 1 ? -1 : 1;
       } else {
         e.x += e.vx * dt;
         e.y += e.vy * dt;
@@ -1283,16 +1338,21 @@ export class PlatformerEngine {
     const spec = ENEMY_SHOTS[e.kind];
     const ox = e.x + e.face * e.w * 0.5;
     const oy = e.y - e.h * 0.15;
+    // he throws at where you are, and misses by more the further away you
+    // are — the whole of the difference between an enemy and a turret
+    const off = SPREAD + Math.hypot(p.x - ox, p.y - oy) * SPREAD_PER_UNIT;
+    const tx = p.x + (Math.random() * 2 - 1) * off;
+    const ty = p.y + (Math.random() * 2 - 1) * off * 0.6;
     let vx: number;
     let vy: number;
     if (r.gravity > 0) {
       // pick the flight time from the horizontal gap, then solve vy for it
-      const dx = p.x - ox;
+      const dx = tx - ox;
       const t = Math.max(0.35, Math.min(1.4, Math.abs(dx) / r.speed));
       vx = dx / t;
-      vy = (p.y - 20 - oy) / t - 0.5 * r.gravity * t;
+      vy = (ty - 20 - oy) / t - 0.5 * r.gravity * t;
     } else {
-      const a = Math.atan2(p.y - 10 - oy, p.x - ox);
+      const a = Math.atan2(ty - 10 - oy, tx - ox);
       vx = Math.cos(a) * r.speed;
       vy = Math.sin(a) * r.speed;
     }
