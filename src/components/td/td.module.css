@@ -379,10 +379,19 @@
   gap: 0.4rem;
 }
 .tool {
+  /*
+   * Square, because the skin under it is a round button: 44 by 40 stretched
+   * that disc into an oval, which nobody notices behind a ▶ glyph and
+   * everybody notices behind an icon. Centred the same way for the same
+   * reason — an inline SVG sits on the text baseline, not in the middle.
+   */
+  display: grid;
+  place-items: center;
   width: 44px;
-  height: 40px;
+  height: 44px;
   color: var(--parch);
   font-size: 0.8rem;
+  line-height: 1;
   cursor: pointer;
 }
 
