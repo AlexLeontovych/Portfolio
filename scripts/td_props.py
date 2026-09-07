@@ -171,15 +171,22 @@ def cut(mid, data):
     # must never take, because there it would be a wall across the way
     chosen = fa._dilate(chosen, SLOP) & ~road & reach
 
-    # and wherever the map is asked to stay one picture, it stays one picture.
-    # Some corners read better whole than sorted: a wall, a bridge and a
-    # stair, all leaning past each other, will not come apart into pieces that
-    # each stand somewhere, and trying leaves seams instead of depth
+    # wherever the map is asked to stay one picture, it stays one picture.
+    # Some corners read better whole than sorted: a wall, a bridge and a stair
+    # all leaning past each other will not come apart into pieces that each
+    # stand somewhere, and trying leaves seams instead of depth
+    whole = np.zeros((H, W), dtype=bool)
     for x0, y0, x1, y1 in m.get("whole") or []:
-        chosen[max(0, int(y0)):int(y1), max(0, int(x0)):int(x1)] = False
+        whole[max(0, int(y0)):int(y1), max(0, int(x0)):int(x1)] = True
 
     pieces = []
     for keep in parts(chosen):
+        # a thing that so much as reaches into one of those corners is left
+        # there ENTIRELY. Clipping it at the corner's edge only moved the
+        # seam: a pillar was cut across the middle and its top half went on
+        # being sorted while its feet stayed in the map
+        if whole.any() and (keep & whole).any():
+            continue
         layer[keep, :3] = a[keep]
         layer[keep, 3] = 255
         ys, xs = np.nonzero(keep)
