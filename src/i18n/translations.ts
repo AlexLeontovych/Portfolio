@@ -165,6 +165,7 @@ export const dict = {
     },
     td: {
       tagline: "Five maps, five towers, three ways to have a bad time. Hold the road.",
+      sound: "Sound on / off",
       start: "MARCH",
       exit: "Back to site",
       levels: "Maps",
@@ -453,6 +454,7 @@ export const dict = {
     },
     td: {
       tagline: "Пять карт, пять башен, три способа огрести. Держи дорогу.",
+      sound: "Звук вкл / выкл",
       start: "В БОЙ",
       exit: "На сайт",
       levels: "Карты",
@@ -741,6 +743,7 @@ export const dict = {
     },
     td: {
       tagline: "П'ять карт, п'ять веж, три способи отримати. Тримай дорогу.",
+      sound: "Звук увімк / вимк",
       start: "У БІЙ",
       exit: "На сайт",
       levels: "Карти",

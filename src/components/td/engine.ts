@@ -15,6 +15,7 @@ import { Animator, loadAnimSet, loadImage, type AnimSet } from "../platformer/sp
 import { drawSprite, loadAtlas, type Atlas } from "./atlas";
 import { BOARD, LEVELS, loadLevel, waveSize, type Level } from "./levels";
 import { MAPS } from "./maps";
+import { TdAudio, type Track } from "./audio";
 import { distanceToPath, headingAt, pointAt, type Point } from "./path";
 import {
   CREEPS, DIFFICULTIES, SELL_REFUND, SPELLS, SPELL_ORDER, TOWERS, applyDamage,
@@ -115,6 +116,16 @@ const GRAPPLE = REACH + 7;
 const ARRIVED = 0.5;
 /** Seconds the door takes to swing open or shut. */
 const GATE_TIME = 0.4;
+/** What each biome sounds like. Three maps share the forest; that is fine. */
+const TRACKS: Record<"forest" | "cave" | "ember", Track> = {
+  forest: "forest",
+  cave: "cave",
+  ember: "ember",
+};
+/** Which noise a tower makes when it fires, by what it fires. */
+const SHOT_CUE = {
+  arrow: "bow", bolt: "bolt", shell: "cannon", rocket: "gun", none: null,
+} as const;
 
 export type Phase = "loading" | "playing" | "paused" | "won" | "lost";
 
@@ -350,6 +361,8 @@ export class TdEngine {
   private shots: Shot[] = [];
   private puffs: Puff[] = [];
   private blasts: Blast[] = [];
+  /** the mixer, public so the HUD's speaker button can reach it */
+  readonly audio = new TdAudio();
   private casts: Cast[] = [];
   private spellSheets: Partial<Record<SpellId, HTMLImageElement>> = {};
   private cooling: Partial<Record<SpellId, number>> = {};
@@ -447,6 +460,7 @@ export class TdEngine {
     this.waveIdx = -1;
     this.countdown = d.prep;
     this.decor = this.buildDecor();
+    void this.audio.setTrack(TRACKS[this.level.def.biome]);
     this.setPhase("playing");
     this.resize();
     this.emit();
@@ -459,6 +473,7 @@ export class TdEngine {
   destroy() {
     this.destroyed = true;
     this.running = false;
+    this.audio.destroy();
     cancelAnimationFrame(this.raf);
   }
 
@@ -476,6 +491,10 @@ export class TdEngine {
   private setPhase(p: Phase) {
     if (this.phase === p) return;
     this.phase = p;
+    if (p === "won" || p === "lost") {
+      void this.audio.setTrack(null);
+      this.audio.play(p === "won" ? "win" : "lose");
+    }
     this.hooks.onPhase(p);
   }
 
@@ -604,10 +623,12 @@ export class TdEngine {
     if (this.armed) this.gold += SPELLS[this.armed].gold;
     this.armed = null;
     if ((this.cooling[id] ?? 0) > 0 || this.gold < SPELLS[id].gold) {
+      this.audio.play("deny");
       this.emit();
       return;
     }
     this.gold -= SPELLS[id].gold;
+    this.audio.play("arm");
     this.armed = id;
     this.selected = null;
     this.emit();
@@ -647,6 +668,7 @@ export class TdEngine {
         id, x: p.x, y: p.y, t: 0,
         left: def.heal ?? def.damage ?? 0,
       });
+      this.audio.play(id === "fireball" ? "fireball" : id === "arrows" ? "rain" : "heal");
       this.emit();
       return;
     }
@@ -660,6 +682,7 @@ export class TdEngine {
       }
     });
     this.selected = best >= 0 ? best : null;
+    if (this.selected !== null) this.audio.play("select");
     this.emit();
   }
 
@@ -673,7 +696,10 @@ export class TdEngine {
     const slot = this.level.slots[this.selected];
     if (this.towers.some((t) => t.slot === this.selected)) return;
     const cost = TOWERS[id].tiers[0].cost;
-    if (this.gold < cost) return;
+    if (this.gold < cost) {
+      this.audio.play("deny");
+      return;
+    }
     this.gold -= cost;
     const tower: Tower = {
       slot: this.selected, x: slot.x, y: slot.y, id, tier: 0,
@@ -682,6 +708,7 @@ export class TdEngine {
     };
     if (TOWERS[id].blocks) this.assignRally(tower);
     this.towers.push(tower);
+    this.audio.play("build");
     this.puff(slot.x, slot.y, 14, "#ffd45e");
     this.emit();
   }
@@ -704,7 +731,10 @@ export class TdEngine {
     if (!t || !tiers || tier <= t.tier || tier >= tiers.length) return;
     let cost = 0;
     for (let k = t.tier + 1; k <= tier; k++) cost += tiers[k].cost;
-    if (this.gold < cost) return;
+    if (this.gold < cost) {
+      this.audio.play("deny");
+      return;
+    }
     this.gold -= cost;
     t.spent += cost;
     t.tier = tier;
@@ -712,6 +742,7 @@ export class TdEngine {
       t.soldiers = [];
       this.assignRally(t);
     }
+    this.audio.play("upgrade");
     this.puff(t.x, t.y, 16, "#c6d831");
     this.emit();
   }
@@ -783,6 +814,7 @@ export class TdEngine {
   sell() {
     const t = this.towerAtSelection();
     if (!t) return;
+    this.audio.play("sell");
     this.gold += Math.round(t.spent * SELL_REFUND);
     this.towers = this.towers.filter((x) => x !== t);
     for (const c of this.creeps) if (c.blocker && c.blocker.tower === t) c.blocker = null;
@@ -794,6 +826,7 @@ export class TdEngine {
   /** March the next wave now and pocket the unspent countdown. */
   callWave() {
     if (this.phase !== "playing" || this.countdown <= 0) return;
+    this.audio.play("coins");
     this.gold += Math.round(this.countdown * EARLY_BONUS);
     this.countdown = 0;
     this.emit();
@@ -911,7 +944,9 @@ export class TdEngine {
     }));
     this.countdown = BETWEEN_WAVES;
     this.hooks.onToast({ kind: "wave", index: this.waveIdx + 1 });
-    if (wave.groups.some((g) => CREEPS[g.creep].boss)) this.hooks.onToast({ kind: "boss" });
+    const boss = wave.groups.some((g) => CREEPS[g.creep].boss);
+    this.audio.play(boss ? "boss" : "wave");
+    if (boss) this.hooks.onToast({ kind: "boss" });
     this.emit();
   }
 
@@ -976,12 +1011,14 @@ export class TdEngine {
         if (c.swing <= 0) {
           c.swing = 1.1;
           c.anim?.play("attack", true);
+          this.audio.play("clash");
           c.blocker.hp -= Math.max(4, c.def.hp * 0.06);
           if (c.blocker.hp <= 0) {
             c.blocker.dead = true;
             c.blocker.respawn = MUSTER_TIME;
             c.blocker.action = "death";
             c.blocker.t = 0;
+            this.audio.play("soldierDie");
             c.blocker.target = null;
             this.puff(c.blocker.x, c.blocker.y, 8, "#ff5f86");
             c.blocker = null;
@@ -999,7 +1036,8 @@ export class TdEngine {
         this.lives -= c.def.leak;
         c.dead = true;
         c.dying = 99; // straight to removal, no corpse at the keep
-        this.hooks.onToast({ kind: "leak" });
+        this.audio.play("leak");
+      this.hooks.onToast({ kind: "leak" });
         this.emit();
         if (this.lives <= 0) {
           this.lives = 0;
@@ -1018,6 +1056,7 @@ export class TdEngine {
       c.dead = true;
       c.dying = 0;
       c.anim?.play("death", true);
+      this.audio.play(c.def.voice, c.def.boss ? 1 : 0.8);
       this.gold += Math.round(c.def.gold * DIFFICULTIES[this.diff].gold_rate);
       this.puff(this.creepPos(c).x, this.creepPos(c).y, 10, "#ffd45e");
       for (const s of this.towers.flatMap((t) => t.soldiers)) if (s.target === c) s.target = null;
@@ -1062,6 +1101,8 @@ export class TdEngine {
       t.angle = Math.atan2(p.y - t.y, p.x - t.x);
       t.cooldown = tier.reload;
       t.fire = 0;
+      const cue = SHOT_CUE[def.projectile];
+      if (cue) this.audio.play(cue);
       this.shots.push({
         x: t.x, y: t.y - 22, target, tx: p.x, ty: p.y,
         speed: def.projectile === "shell" ? 260 : 460,
@@ -1192,11 +1233,13 @@ export class TdEngine {
       if (s.swing <= 0) {
         s.swing = SWING_TIME;
         s.t = 0;                       // the swing and its animation start together
+        this.audio.play("swing");
         this.hurtCreep(s.target, s.damage, "physical");
       }
     }
 
     const open = inTheDoorway ? 1 : 0;
+    if (open && t.gate === 0) this.audio.play("gate");
     t.gate += Math.sign(open - t.gate) * Math.min(dt / GATE_TIME, Math.abs(open - t.gate));
   }
 
@@ -1298,10 +1341,12 @@ export class TdEngine {
         const p = this.creepPos(c);
         if (Math.hypot(p.x - s.tx, p.y - s.ty) <= s.splash) this.hurtCreep(c, s.damage, s.kind);
       }
+      this.audio.play("boom");
       this.blasts.push({ x: s.tx, y: s.ty, t: 0, scale: Math.max(0.5, s.splash / 46) });
       this.puff(s.tx, s.ty, 10, "#ffb347");
     } else if (s.target && !s.target.dead) {
       this.hurtCreep(s.target, s.damage, s.kind);
+      this.audio.play("hit");
       this.puff(s.tx, s.ty, 4, s.kind === "magic" ? "#b678ff" : "#ffe9a8");
     }
   }

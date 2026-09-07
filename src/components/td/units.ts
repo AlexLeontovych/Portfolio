@@ -40,6 +40,8 @@ export interface CreepDef {
   scale: number;
   /** multiplied into the sprite, so one sheet yields several enemies */
   tint?: string;
+  /** the noise it makes on the way down — a cue in the audio sprite */
+  voice: "dieSoft" | "dieYelp" | "dieBony" | "dieShade" | "boss";
   /** creeps that stop to fight blockers; a wraith walks straight past them */
   ignoresBlockers?: boolean;
   boss?: boolean;
@@ -48,36 +50,39 @@ export interface CreepDef {
 export const CREEPS: Record<CreepId, CreepDef> = {
   mushroom: {
     name: "Mushroom", sheet: "enemies/mushroom", hp: 70, speed: 30, armour: 0,
-    resist: 0, gold: 6, leak: 1, flying: false, scale: 1.15,
+    resist: 0, gold: 6, leak: 1, flying: false, scale: 1.15, voice: "dieSoft",
   },
   goblin: {
     name: "Goblin", sheet: "enemies/goblin", hp: 52, speed: 56, armour: 0,
-    resist: 0, gold: 7, leak: 1, flying: false, scale: 1.15,
+    resist: 0, gold: 7, leak: 1, flying: false, scale: 1.15, voice: "dieYelp",
   },
   skeleton: {
     name: "Skeleton", sheet: "enemies/skeleton", hp: 150, speed: 28, armour: 3,
-    resist: 0, gold: 14, leak: 2, flying: false, scale: 1.2,
+    resist: 0, gold: 14, leak: 2, flying: false, scale: 1.2, voice: "dieBony",
   },
   flyingEye: {
     name: "Flying Eye", sheet: "enemies/flying-eye", hp: 80, speed: 70, armour: 0,
-    resist: 0.25, gold: 11, leak: 1, flying: true, scale: 1.15,
+    resist: 0.25, gold: 11, leak: 1, flying: true, scale: 1.15, voice: "dieShade",
   },
   eliteGoblin: {
     name: "Goblin Raider", sheet: "enemies/goblin", hp: 130, speed: 78, armour: 1,
     resist: 0, gold: 16, leak: 2, flying: false, scale: 1.3, tint: "#ff6a4d",
+    voice: "dieYelp",
   },
   eliteMushroom: {
     name: "Blight Mushroom", sheet: "enemies/mushroom", hp: 240, speed: 26, armour: 4,
     resist: 0.15, gold: 22, leak: 2, flying: false, scale: 1.45, tint: "#8f5bff",
+    voice: "dieSoft",
   },
   wraith: {
     name: "Wraith", sheet: "enemies/flying-eye", hp: 190, speed: 92, armour: 0,
     resist: 0.4, gold: 26, leak: 3, flying: true, scale: 1.25, tint: "#5ee7c8",
-    ignoresBlockers: true,
+    voice: "dieShade", ignoresBlockers: true,
   },
   wizard: {
     name: "Evil Wizard", sheet: "boss/wizard", hp: 2600, speed: 22, armour: 6,
     resist: 0.3, gold: 220, leak: 12, flying: false, scale: 1.9, boss: true,
+    voice: "boss",
   },
 };
 

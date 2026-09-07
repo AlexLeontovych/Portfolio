@@ -49,6 +49,40 @@ thatched roof does not.
 
 The creeps are the same LuizMelo sheets the platformer uses, credited above.
 
+## Sound — IRONWOOD KEEP tower defense
+
+Every effect in the game is cut from five public-domain packs and laid end to end into one
+sprite (`public/games/td/audio/sfx.m4a`, 263 kB for thirty cues) by `scripts/td_audio.py`,
+which names the exact file it takes out of each. The packs themselves are not in this
+repository; the script plus this list is enough to rebuild the whole soundtrack.
+
+**Kenney** — [kenney.nl](https://kenney.nl/assets/category:Audio) · Licence: CC0
+Interface Sounds (the menu), Impact Sounds (arrow strikes, the wave bell), RPG Audio (coins,
+the barracks door) and Music Jingles (the two endings).
+
+**artisticdude** — [RPG Sound Pack](https://opengameart.org/content/rpg-sound-pack) and
+[Battle Sound Effects](https://opengameart.org/content/battle-sound-effects) · Licence: CC0
+The bow, the sword swings, and what a mushroom, a wraith and a soldier each sound like on the
+way down.
+
+**rubberduck** — [80 CC0 RPG SFX](https://opengameart.org/content/80-cc0-rpg-sfx) and
+[25 CC0 bang / firework SFX](https://opengameart.org/content/25-cc0-bang-sfx) · Licence: CC0
+Blades, the creatures' voices, the spells, and the cannon and its burst — the last recorded
+from actual fireworks.
+
+The music is one track per biome, cut to a loop and re-encoded to about a megabyte each. They
+are fetched when a level on that biome is started, and not before:
+
+* forest — *The Field Of Dreams* by **pauliuw** ·
+  [CC0](https://opengameart.org/content/the-field-of-dreams)
+* cave — *Cave Theme* by **Brandon Morris** ·
+  [CC0](https://opengameart.org/content/cave-theme)
+* ember — *Determined Pursuit* by **Emma_MA** ·
+  [CC0](https://opengameart.org/content/determined-pursuit-epic-orchestra-loop)
+
+CC0 asks for nothing, which is exactly why it is used here: a public repository redistributes
+whatever it contains, and these are the assets that may be redistributed.
+
 ## Spells — IRONWOOD KEEP tower defense
 
 The three area spells (`public/games/td/spells/`) are generated for this project: sixteen frames

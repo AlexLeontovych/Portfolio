@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "../../i18n/I18nContext";
+import { sound, useMuted } from "../../lib/muted";
 import { td, useTdOpen } from "../../lib/tdStore";
 import { lockScroll, unlockScroll } from "../../lib/scrollLock";
-import { Close } from "../Icons";
+import { Close, Muted, Sound } from "../Icons";
 import { LEVELS } from "./levels";
 import { MAPS } from "./maps";
 import { TdEngine, type Hud, type Phase } from "./engine";
@@ -102,6 +103,7 @@ export default function Td() {
   const [level, setLevel] = useState(0);
   const [diff, setDiff] = useState<DifficultyId>("normal");
   const [unlocked, setUnlocked] = useState(0);
+  const muted = useMuted();
 
   useEffect(() => {
     if (!open) return;
@@ -129,6 +131,7 @@ export default function Td() {
       },
     });
     engineRef.current = engine;
+    engine.audio.wake();
     if (import.meta.env.DEV) {
       (window as unknown as { __td?: TdEngine }).__td = engine;
     }
@@ -136,6 +139,10 @@ export default function Td() {
     if (engineRef.current !== engine) return;
     engine.start(lv, d);
   }, [t]);
+
+  useEffect(() => {
+    engineRef.current?.audio.setMuted(muted);
+  }, [muted]);
 
   useEffect(() => {
     if (open) return;
@@ -323,6 +330,16 @@ export default function Td() {
               onClick={() => engineRef.current?.setPaused(phase !== "paused")}
             >
               {phase === "paused" ? "▶" : "❚❚"}
+            </button>
+            <button
+              type="button"
+              className={styles.tool}
+              onClick={() => sound.toggle()}
+              aria-pressed={muted}
+              aria-label={t("td.sound")}
+              title={t("td.sound")}
+            >
+              {muted ? <Muted /> : <Sound />}
             </button>
           </div>
 
