@@ -1133,6 +1133,17 @@ export class TdEngine {
     if (!this.level) return;
     ctx.setTransform(this.view.scale, 0, 0, this.view.scale, this.view.ox, this.view.oy);
 
+    // Nothing is drawn outside the picture. Every road runs eighty units past
+    // the edge of the board so creeps walk in through their gate and out
+    // through the far one instead of appearing and vanishing on the spot —
+    // but the board is letterboxed into the canvas, so that overrun had
+    // somewhere to show, and a column could be watched marching about on the
+    // bare margin at either end. The map is the world; the margin is a frame.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, BOARD.w, BOARD.h);
+    ctx.clip();
+
     const pal = BIOMES[this.level.def.biome];
     const bg = this.level.image ? this.maps[this.level.image] : undefined;
     if (bg) {
@@ -1153,6 +1164,7 @@ export class TdEngine {
     this.drawShots(ctx);
     this.drawBlasts(ctx);
     this.drawPuffs(ctx);
+    ctx.restore();
   }
 
   /**
