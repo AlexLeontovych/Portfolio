@@ -203,7 +203,7 @@ export const MAPS: Record<string, MapDef> = {
     props: "forge.props.webp",
     pieces: [
       { x: 0, y: 0, w: 56, h: 140, base: 139 },
-      { x: 896, y: 300, w: 64, h: 146, base: 445 },
+      { x: 922, y: 296, w: 38, h: 156, base: 451 },
       { x: 20, y: 350, w: 66, h: 92, base: 441 },
       { x: 52, y: 296, w: 70, h: 72, base: 367 },
       { x: 122, y: 328, w: 46, h: 54, base: 381 },
