@@ -182,6 +182,18 @@ def cut(mid, data):
     for x0, y0, x1, y1 in m.get("whole") or []:
         whole[max(0, int(y0)):int(y1), max(0, int(x0)):int(x1)] = True
 
+    # A box drawn by hand is a decision, not a guess: this thing goes in
+    # front, always. It is kept whole and given the bottom of the board for a
+    # ground line, so it sorts after everyone.
+    #
+    # Depth is for the shapes the SHEET finds, which are whatever happens to
+    # touch and need sorting to be any use. It also cannot be trusted for a
+    # thing that overhangs: the canyon's bluff leans out over the road, so
+    # column by column its lowest pixel floats in the air well above the
+    # ground it stands on, and a creep walking under the overhang came out in
+    # front of it. Naming it settles that in one stroke.
+    slice_wide = SLICE if not boxes else 10 ** 6
+
     pieces = []
     for keep in parts(chosen):
         # a thing that so much as reaches into one of those corners is left
@@ -194,8 +206,8 @@ def cut(mid, data):
         layer[keep, 3] = 255
         ys, xs = np.nonzero(keep)
         x0, x1 = int(xs.min()), int(xs.max()) + 1
-        for cx in range(x0, x1, SLICE):
-            strip = keep[:, cx:min(cx + SLICE, x1)]
+        for cx in range(x0, x1, slice_wide):
+            strip = keep[:, cx:min(cx + slice_wide, x1)]
             if not strip.any():
                 continue
             sy = np.nonzero(strip.any(axis=1))[0]
@@ -205,8 +217,9 @@ def cut(mid, data):
                 "y": int(sy.min()),
                 "w": int(sxs.max() - sxs.min() + 1),
                 "h": int(sy.max() - sy.min() + 1),
-                # the ground under this stretch of it, not under all of it
-                "base": int(sy.max()),
+                # the ground under this stretch of it, not under all of it —
+                # or the bottom of the board, for a thing named to be in front
+                "base": H - 1 if boxes else int(sy.max()),
             })
     pieces.sort(key=lambda p: p["base"])
     m["pieces"] = pieces

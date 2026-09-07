@@ -131,12 +131,8 @@ export const MAPS: Record<string, MapDef> = {
     image: "canyon.webp",
     props: "canyon.props.webp",
     pieces: [
-      { x: 54, y: 32, w: 4, h: 14, base: 45 },
-      { x: 6, y: 32, w: 24, h: 37, base: 68 },
-      { x: 30, y: 32, w: 24, h: 40, base: 71 },
-      { x: 0, y: 69, w: 24, h: 65, base: 133 },
-      { x: 48, y: 100, w: 10, h: 64, base: 163 },
-      { x: 24, y: 83, w: 24, h: 82, base: 164 },
+      { x: 6, y: 32, w: 52, h: 40, base: 539 },
+      { x: 0, y: 69, w: 58, h: 96, base: 539 },
     ],
     road: [
       { x: -66, y: 26 }, { x: 22, y: 72 }, { x: 39, y: 79 }, { x: 55, y: 90 },
