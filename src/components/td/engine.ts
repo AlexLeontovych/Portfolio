@@ -349,7 +349,7 @@ export class TdEngine {
     const maps = Promise.all(
       [...new Set(LEVELS.map((l) => l.map).filter(Boolean))].flatMap((id) => {
         const m = MAPS[id as string];
-        return [m.image, m.overlay].filter((f): f is string => !!f);
+        return [m.image, m.overlay, m.props].filter((f): f is string => !!f);
       }).map(async (file) =>
         [file, await loadImage(`./games/td/maps/${file}`).catch(() => null)] as const),
     );
@@ -1257,6 +1257,7 @@ export class TdEngine {
     this.drawSoldiers(ctx, true);      // the fallen, under everyone's boots
     this.drawCreeps(ctx);
     this.drawSoldiers(ctx, false);
+    this.drawProps(ctx);
     // the gate facades go over whoever is walking through them
     const gates = this.level.overlay ? this.maps[this.level.overlay] : undefined;
     if (gates) ctx.drawImage(gates, 0, 0, BOARD.w, BOARD.h);
@@ -1687,6 +1688,50 @@ export class TdEngine {
     ctx.fillRect(s.x - 10, s.y - 34, 20, 4);
     ctx.fillStyle = "#6ad0ff";
     ctx.fillRect(s.x - 9, s.y - 33, 18 * f, 2);
+  }
+
+  /**
+   * The things a creep walks behind, drawn over whoever is behind them.
+   *
+   * The map is one flat picture, so the gate a creep comes out of, the
+   * trestle it passes under and the ore cart hanging over the track were all
+   * behind it. Each piece was cut with the line it stands on recorded, and a
+   * creep standing further DOWN the board than that line is in front of it.
+   *
+   * So the piece is painted over everything except those, and "except those"
+   * is a clip: the piece's own rectangle with theirs punched out of it by the
+   * even-odd rule. That leaves the drawing order alone — no sorting the world
+   * by depth every frame — and costs one path per piece.
+   */
+  private drawProps(ctx: CanvasRenderingContext2D) {
+    const img = this.level.props ? this.maps[this.level.props] : undefined;
+    const pieces = this.level.pieces;
+    if (!img || !pieces.length) return;
+    const sx = img.naturalWidth / BOARD.w;
+    const sy = img.naturalHeight / BOARD.h;
+    for (const p of pieces) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(p.x, p.y, p.w, p.h);
+      let cut = false;
+      for (const c of this.creeps) {
+        if (c.dead) continue;
+        const q = this.creepPos(c);
+        if (q.y <= p.base || q.x < p.x - 24 || q.x > p.x + p.w + 24) continue;
+        ctx.rect(q.x - 22, q.y - 44, 44, 48);
+        cut = true;
+      }
+      for (const t of this.towers) {
+        for (const s of t.soldiers) {
+          if (s.dead || s.y <= p.base || s.x < p.x - 24 || s.x > p.x + p.w + 24) continue;
+          ctx.rect(s.x - 22, s.y - 44, 44, 48);
+          cut = true;
+        }
+      }
+      ctx.clip(cut ? "evenodd" : "nonzero");
+      ctx.drawImage(img, p.x * sx, p.y * sy, p.w * sx, p.h * sy, p.x, p.y, p.w, p.h);
+      ctx.restore();
+    }
   }
 
   private drawShots(ctx: CanvasRenderingContext2D) {

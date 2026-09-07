@@ -22,6 +22,16 @@ export interface MapDef {
   /** gate facades drawn OVER the creeps, so they come out from behind the arch */
   overlay?: string;
   /**
+   * Things a creep walks BEHIND, cut out of the map into a layer of their own.
+   *
+   * The map is one flat picture, so without this everything on it is behind
+   * everything the game draws. Each piece carries the line it stands on, and
+   * the game draws it after whoever is further up the board and before
+   * whoever is further down.
+   */
+  props?: string;
+  pieces?: { x: number; y: number; w: number; h: number; base: number }[];
+  /**
    * The map's other ways across, each complete from its own gate to its own.
    *
    * Several maps are painted with more than one way through. Sending part of
@@ -190,6 +200,15 @@ export const MAPS: Record<string, MapDef> = {
   forge: {
     id: "forge",
     image: "forge.webp",
+    props: "forge.props.webp",
+    pieces: [
+      { x: 0, y: 0, w: 56, h: 140, base: 139 },
+      { x: 896, y: 300, w: 64, h: 146, base: 445 },
+      { x: 20, y: 350, w: 66, h: 92, base: 441 },
+      { x: 52, y: 296, w: 70, h: 72, base: 367 },
+      { x: 122, y: 328, w: 46, h: 54, base: 381 },
+      { x: 158, y: 348, w: 50, h: 84, base: 431 },
+    ],
     road: [
       { x: 19, y: -19 }, { x: 45, y: 75 }, { x: 55, y: 91 }, { x: 72, y: 99 },
       { x: 88, y: 108 }, { x: 104, y: 118 }, { x: 118, y: 129 }, { x: 131, y: 142 },

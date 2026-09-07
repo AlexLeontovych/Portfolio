@@ -75,6 +75,9 @@ export interface Level {
   image: string | null;
   /** gate facades drawn over the creeps, so they come out from behind the arch */
   overlay: string | null;
+  /** the layer of things creeps walk behind, and where each of them stands */
+  props: string | null;
+  pieces: { x: number; y: number; w: number; h: number; base: number }[];
 }
 
 const w = (...groups: WaveGroup[]): Wave => ({ groups });
@@ -260,6 +263,8 @@ export function loadLevel(idx: number): Level {
     slots: map ? map.plots : deriveSlots(path),
     image: map ? map.image : null,
     overlay: map?.overlay ?? null,
+    props: map?.props ?? null,
+    pieces: map?.pieces ?? [],
   };
 }
 

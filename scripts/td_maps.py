@@ -61,6 +61,16 @@ export interface MapDef {
   /** gate facades drawn OVER the creeps, so they come out from behind the arch */
   overlay?: string;
   /**
+   * Things a creep walks BEHIND, cut out of the map into a layer of their own.
+   *
+   * The map is one flat picture, so without this everything on it is behind
+   * everything the game draws. Each piece carries the line it stands on, and
+   * the game draws it after whoever is further up the board and before
+   * whoever is further down.
+   */
+  props?: string;
+  pieces?: { x: number; y: number; w: number; h: number; base: number }[];
+  /**
    * The map's other ways across, each complete from its own gate to its own.
    *
    * Several maps are painted with more than one way through. Sending part of
@@ -218,6 +228,13 @@ def main():
         body.append(f'  {mid}: {{\n    id: "{mid}",\n    image: "{mid}.webp",')
         if m.get("gates"):
             body.append(f'    overlay: "{mid}.over.webp",')
+        if m.get("pieces"):
+            body.append(f'    props: "{mid}.props.webp",')
+            body.append("    pieces: [")
+            for p in m["pieces"]:
+                body.append(f'      {{ x: {p["x"]}, y: {p["y"]}, w: {p["w"]}, '
+                            f'h: {p["h"]}, base: {p["base"]} }},')
+            body.append("    ],")
         body.append(wrap("road", extend_ends(m["road"])))
         if m.get("branches"):
             body.append("    branches: [")
