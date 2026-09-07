@@ -67,6 +67,16 @@ SPECK = 260
 SLOP = 4
 #: a thing further than this from any way can never be in front of anybody
 NEAR = 54
+#: how wide a piece may be before it is sliced
+#:
+#: A wall running diagonally past a road has no single line it stands on: it
+#: is in front at its near end and behind at its far one. Given one line —
+#: its lowest pixel, which is its nearest corner — it stood in front along
+#: its whole length and painted itself over creeps it was plainly behind.
+#: Sliced into columns, each takes the ground under ITS OWN stretch, and the
+#: slices reassemble into the same wall because they are cut from one picture
+#: and drawn back at one place.
+SLICE = 24
 
 
 def stamp(pts, half):
@@ -163,15 +173,24 @@ def cut(mid, data):
 
     pieces = []
     for keep in parts(chosen):
-        ys, xs = np.nonzero(keep)
         layer[keep, :3] = a[keep]
         layer[keep, 3] = 255
-        pieces.append({
-            "x": int(xs.min()), "y": int(ys.min()),
-            "w": int(xs.max() - xs.min() + 1), "h": int(ys.max() - ys.min() + 1),
-            # the ground it stands on: its lowest pixel
-            "base": int(ys.max()),
-        })
+        ys, xs = np.nonzero(keep)
+        x0, x1 = int(xs.min()), int(xs.max()) + 1
+        for cx in range(x0, x1, SLICE):
+            strip = keep[:, cx:min(cx + SLICE, x1)]
+            if not strip.any():
+                continue
+            sy = np.nonzero(strip.any(axis=1))[0]
+            sxs = np.nonzero(strip.any(axis=0))[0]
+            pieces.append({
+                "x": cx + int(sxs.min()),
+                "y": int(sy.min()),
+                "w": int(sxs.max() - sxs.min() + 1),
+                "h": int(sy.max() - sy.min() + 1),
+                # the ground under this stretch of it, not under all of it
+                "base": int(sy.max()),
+            })
     pieces.sort(key=lambda p: p["base"])
     m["pieces"] = pieces
     print(f"  {mid}: {len(pieces)} piece(s) in front, "
