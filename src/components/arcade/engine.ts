@@ -17,6 +17,7 @@
  * driven through the `onState` / `onGameOver` callbacks.
  */
 
+import { ArcadeAudio } from "./audio";
 import { CAR_KEY, CAR_STYLES } from "./cars";
 
 export type ArcadePhase = "ready" | "playing" | "crash" | "over" | "prompt";
@@ -252,102 +253,14 @@ function bakeErrorBlock(token: string, flash: boolean): HTMLCanvasElement {
   return c;
 }
 
-/** Minimal WebAudio blips — created lazily on the first user gesture. */
-class Beeper {
-  private ctx: AudioContext | null = null;
-
-  private ensure(): AudioContext | null {
-    try {
-      if (!this.ctx) this.ctx = new AudioContext();
-      if (this.ctx.state === "suspended") void this.ctx.resume();
-      return this.ctx;
-    } catch {
-      return null;
-    }
-  }
-
-  private tone(freq0: number, freq1: number, dur: number, type: OscillatorType, vol: number) {
-    const ctx = this.ensure();
-    if (!ctx) return;
-    try {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const t = ctx.currentTime;
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq0, t);
-      osc.frequency.exponentialRampToValueAtTime(Math.max(1, freq1), t + dur);
-      gain.gain.setValueAtTime(vol, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + dur + 0.02);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  coin() {
-    this.tone(880, 1720, 0.09, "square", 0.05);
-  }
-  go() {
-    this.tone(440, 880, 0.16, "square", 0.06);
-  }
-  graze(streak: number) {
-    const f = 620 * Math.pow(1.09, Math.min(streak, 12));
-    this.tone(f, f * 1.6, 0.07, "square", 0.045);
-  }
-  alert() {
-    this.tone(980, 660, 0.09, "square", 0.06);
-    this.tone(660, 980, 0.09, "square", 0.06);
-  }
-  rewind() {
-    this.tone(1400, 240, 0.22, "sawtooth", 0.05);
-    this.tone(240, 900, 0.18, "square", 0.05);
-  }
-  fanfare() {
-    this.tone(523, 523, 0.12, "square", 0.06);
-    this.tone(659, 659, 0.12, "square", 0.06);
-    this.tone(784, 1046, 0.25, "square", 0.07);
-  }
-  crash() {
-    const ctx = this.ensure();
-    if (!ctx) return;
-    try {
-      const dur = 0.35;
-      const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-      }
-      const src = ctx.createBufferSource();
-      const gain = ctx.createGain();
-      const t = ctx.currentTime;
-      src.buffer = buf;
-      gain.gain.setValueAtTime(0.14, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      src.connect(gain).connect(ctx.destination);
-      src.start(t);
-    } catch {
-      /* ignore */
-    }
-  }
-  destroy() {
-    try {
-      void this.ctx?.close();
-    } catch {
-      /* ignore */
-    }
-    this.ctx = null;
-  }
-}
-
 /* ---------------------------------- engine ---------------------------------- */
 
 export class ArcadeEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private opts: ArcadeOptions;
-  private beeper = new Beeper();
+  /** the mixer, public so the overlay's speaker button can reach it */
+  readonly audio = new ArcadeAudio();
 
   private camDepth = 1 / Math.tan(((FOV / 2) * Math.PI) / 180);
   private playerZoff = CAM_H * this.camDepth;
@@ -597,7 +510,7 @@ export class ArcadeEngine {
     window.removeEventListener("pointercancel", this.onPointerUp);
     this.dprQuery?.removeEventListener("change", this.onDprChange);
     this.resizeObs.disconnect();
-    this.beeper.destroy();
+    this.audio.destroy();
     for (const b of [
       this.skySprite,
       this.fogSprite,
@@ -722,7 +635,10 @@ export class ArcadeEngine {
     this.resetWorld();
     this.tiltZero = null; // grip changes between runs — recalibrate
     this.setPhase("playing");
-    this.beeper.go();
+    this.audio.wake();
+    this.audio.play("go");
+    this.audio.startEngine();
+    void this.audio.setTrack("drive");
   }
 
   /* -------------------------------- state -------------------------------- */
@@ -769,7 +685,7 @@ export class ArcadeEngine {
       this.rewindCharge = false;
       this.promptT = REWIND_WINDOW;
       this.setPhase("prompt");
-      this.beeper.alert();
+      this.audio.play("alert");
     } else {
       this.realCrash();
     }
@@ -778,7 +694,8 @@ export class ArcadeEngine {
   private realCrash() {
     this.crashT = 0;
     this.setPhase("crash");
-    this.beeper.crash();
+    this.audio.play("crash");
+    this.audio.stopEngine();
     this.opts.onCrash?.();
   }
 
@@ -797,7 +714,8 @@ export class ArcadeEngine {
     this.rewindFxT = 0.45;
     this.grazeStreak = 0;
     this.setPhase("playing");
-    this.beeper.rewind();
+    this.audio.play("rewind");
+    this.audio.startEngine();
   }
 
   private spawnConfetti() {
@@ -915,7 +833,9 @@ export class ArcadeEngine {
     if (this.phase === "over") return;
 
     if (this.phase === "prompt") {
+      const was = this.promptT;
       this.promptT -= dt;
+      if (Math.ceil(was * 4) !== Math.ceil(this.promptT * 4)) this.audio.play("count", 0.6);
       if (this.promptT <= 0) this.realCrash();
       return;
     }
@@ -991,6 +911,9 @@ export class ArcadeEngine {
     if (Math.abs(this.playerX) > OFFROAD_LIMIT && this.speed > maxSpeed * 0.35) {
       this.speed = Math.max(maxSpeed * 0.35, this.speed - OFFROAD_DECEL * dt);
     }
+
+    this.audio.engine(this.speed / (BASE_SPEED + MAX_EXTRA),
+                      Math.abs(this.playerX) > OFFROAD_LIMIT);
 
     this.position += this.speed * dt;
     this.skyOff += curve * speedPct * dt * 46;
@@ -1076,7 +999,10 @@ export class ArcadeEngine {
             this.score += pts;
             this.timeDilate = 0.12;
             this.toasts.push({ text: `+${pts} CLOSE!`, t: 0, color: "#aaff00" });
-            this.beeper.graze(this.grazeStreak);
+            // the pitch climbs with the streak, so a run of near misses
+            // reads as one rising phrase rather than the same blip again
+            this.audio.play("graze", 0.9,
+                            Math.pow(1.06, Math.min(this.grazeStreak, 12)));
             continue;
           }
           if (adx > w) continue;
@@ -1084,7 +1010,7 @@ export class ArcadeEngine {
             s.taken = true;
             this.coins += 1;
             this.score += 100;
-            this.beeper.coin();
+            this.audio.play("coin");
           } else {
             this.tryCrash();
             break;
@@ -1096,7 +1022,7 @@ export class ArcadeEngine {
         this.score += 2500;
         this.toasts.push({ text: "+2500 YOU MADE IT!", t: 0, color: COLORS.amber });
         this.spawnConfetti();
-        this.beeper.fanfare();
+        this.audio.play("fanfare");
       }
     }
   }

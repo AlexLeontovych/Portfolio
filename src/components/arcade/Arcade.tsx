@@ -3,11 +3,12 @@ import { createPortal } from "react-dom";
 import { useI18n } from "../../i18n/I18nContext";
 import { arcade, useArcadeOpen } from "../../lib/arcadeStore";
 import { carStore, useSelectedCar } from "../../lib/carStore";
+import { sound, useMuted } from "../../lib/muted";
 import { lockScroll, unlockScroll } from "../../lib/scrollLock";
 import { ArcadeEngine, type ArcadePhase } from "./engine";
 import { CAR_STYLES } from "./cars";
 import { Turntable } from "./carViewer";
-import { Close, Gamepad, Videocam, Smartphone } from "../Icons";
+import { Close, Gamepad, Muted, Videocam, Smartphone, Sound } from "../Icons";
 import styles from "./arcade.module.css";
 
 /**
@@ -70,6 +71,7 @@ export default function Arcade() {
   const closeRef = useRef<HTMLButtonElement>(null);
   const [phase, setPhase] = useState<ArcadePhase>("ready");
   const [tiltOn, setTiltOn] = useState(false);
+  const muted = useMuted();
   const carIdx = useSelectedCar();
   const [result, setResult] = useState<{
     score: number;
@@ -81,6 +83,10 @@ export default function Arcade() {
   const touch =
     typeof window !== "undefined" &&
     window.matchMedia?.("(hover: none), (pointer: coarse)").matches;
+
+  useEffect(() => {
+    engineRef.current?.audio.setMuted(muted);
+  }, [muted]);
 
   // in the garage the arrow keys browse the cars
   useEffect(() => {
@@ -200,6 +206,17 @@ export default function Arcade() {
               title={t("arcade.view")}
             >
               <Videocam width={18} height={18} />
+            </button>
+
+            <button
+              type="button"
+              className={styles.speaker}
+              onClick={() => sound.toggle()}
+              aria-pressed={muted}
+              aria-label={t("arcade.sound")}
+              title={t("arcade.sound")}
+            >
+              {muted ? <Muted width={18} height={18} /> : <Sound width={18} height={18} />}
             </button>
 
             {touch && (

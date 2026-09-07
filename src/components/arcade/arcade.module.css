@@ -97,10 +97,33 @@
   color: var(--text);
 }
 
-/* tilt-steering toggle (touch devices), stacked under the camera button */
-.tilt {
+/* sound on / off, stacked under the camera button */
+.speaker {
   position: absolute;
   top: calc(0.9rem + 104px);
+  right: 0.9rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(21, 12, 43, 0.65);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+.speaker:hover,
+.speaker:focus-visible {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+/* tilt-steering toggle (touch devices), under the speaker */
+.tilt {
+  position: absolute;
+  top: calc(0.9rem + 156px);
   right: 0.9rem;
   z-index: 2;
   display: grid;

@@ -97,6 +97,7 @@ export const dict = {
     },
     arcade: {
       launch: "Arcade",
+      sound: "Sound on / off",
       ready: "Dodge the bugs. Collect the coins.",
       start_key: "Press any key to start",
       start_tap: "Tap to start",
@@ -386,6 +387,7 @@ export const dict = {
     },
     arcade: {
       launch: "Аркада",
+      sound: "Звук вкл / выкл",
       ready: "Уворачивайся от багов. Собирай монеты.",
       start_key: "Нажми любую клавишу",
       start_tap: "Коснись экрана",
@@ -675,6 +677,7 @@ export const dict = {
     },
     arcade: {
       launch: "Аркада",
+      sound: "Звук увімк / вимк",
       ready: "Ухиляйся від багів. Збирай монети.",
       start_key: "Натисни будь-яку клавішу",
       start_tap: "Торкнися екрана",

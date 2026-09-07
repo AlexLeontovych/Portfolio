@@ -49,6 +49,24 @@ thatched roof does not.
 
 The creeps are the same LuizMelo sheets the platformer uses, credited above.
 
+## Sound — NEON RUN
+
+Same shape as the tower defense's: one sprite of effects cut by
+`scripts/arcade_audio.py`, one track underneath. Three of the cues are held rather than played —
+two are the car's engine, pitched by how fast it is going, and the third is the hiss of the
+shoulder.
+
+**Kenney** — [Sci-fi Sounds](https://kenney.nl/assets/sci-fi-sounds) · Licence: CC0
+The engine loops, the shoulder, the crash and the interface ticks.
+
+**rubberduck** — [50 CC0 retro / synth SFX](https://opengameart.org/content/50-cc0-retro-synth-sfx)
+· Licence: CC0
+The coin, the near-miss, the countdown and the fanfare — made in LMMS, which is about as
+close to the source of this game's aesthetic as an asset pack gets.
+
+*Eyeless (Retrowave)* by **Never Sleep** ·
+[CC0](https://opengameart.org/content/eyeless-retrowave) — the track that plays while you drive.
+
 ## Sound — IRONWOOD KEEP tower defense
 
 Every effect in the game is cut from five public-domain packs and laid end to end into one
