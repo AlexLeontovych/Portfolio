@@ -24,6 +24,44 @@ const TOWER_GLYPH: Record<TowerId, string> = {
   archer: "🏹", barracks: "🛡", mage: "✦", gatling: "⁙", bombard: "☄",
 };
 
+/**
+ * The tower itself, painted into the menu at the tier on offer.
+ *
+ * A price and the word "upgrade" tell you nothing about what you are buying.
+ * This is the frame the board draws, so the choice between two tiers is made
+ * on the two towers. The glyph stays underneath as the fallback for a level
+ * whose atlas has not arrived, or a tower that has no art yet.
+ */
+function TowerShot({ engine, id, tier }: {
+  engine: TdEngine | null; id: TowerId; tier: number;
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [drawn, setDrawn] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const paint = () => {
+      const cv = ref.current;
+      if (!alive || !cv || !engine) return false;
+      const ok = engine.drawPreview(cv, id, tier);
+      if (ok) setDrawn(true);
+      return ok;
+    };
+    // the atlas is loaded with the level, so it is normally already here;
+    // one retry covers a menu opened in the same frame it finished
+    if (!paint()) {
+      const again = window.setTimeout(paint, 250);
+      return () => { alive = false; window.clearTimeout(again); };
+    }
+    return () => { alive = false; };
+  }, [engine, id, tier]);
+  return (
+    <span className={styles.shotWrap}>
+      <canvas ref={ref} width={72} height={58} className={styles.shot} />
+      {!drawn && <span className={styles.buildGlyph}>{TOWER_GLYPH[id]}</span>}
+    </span>
+  );
+}
+
 export default function Td() {
   const open = useTdOpen();
   const { t } = useI18n();
@@ -285,7 +323,7 @@ export default function Td() {
                       onClick={() => engineRef.current?.build(id)}
                       title={t(`td.tower_${id}_blurb`)}
                     >
-                      <span className={styles.buildGlyph}>{TOWER_GLYPH[id]}</span>
+                      <TowerShot engine={engineRef.current} id={id} tier={0} />
                       <span className={styles.buildName}>{t(`td.tower_${id}`)}</span>
                       <span className={styles.buildCost}><i className={styles.icon} data-icon="gold" /> {cost}</span>
                     </button>
@@ -299,22 +337,28 @@ export default function Td() {
                 {t(`td.tower_${sel.tower.id}`)} · {t("td.tier")} {sel.tower.tier + 1}
               </p>
               <div className={styles.menuRow}>
-                {sel.tower.upgradeCost !== null ? (
-                  <button
-                    type="button"
-                    className={styles.buildBtn}
-                    disabled={hud!.gold < sel.tower.upgradeCost}
-                    onClick={() => engineRef.current?.upgrade()}
-                  >
-                    <i className={styles.icon} data-icon="up" />
-                    <span className={styles.buildName}>{t("td.upgrade")}</span>
-                    <span className={styles.buildCost}><i className={styles.icon} data-icon="gold" /> {sel.tower.upgradeCost}</span>
-                  </button>
+                {sel.tower.upgrades.length > 0 ? (
+                  sel.tower.upgrades.map((up) => (
+                    <button
+                      key={up.tier}
+                      type="button"
+                      className={styles.buildBtn}
+                      disabled={hud!.gold < up.cost}
+                      onClick={() => engineRef.current?.upgradeTo(up.tier)}
+                      title={`${t("td.tier")} ${up.tier + 1} · ${up.blurb}`}
+                    >
+                      <TowerShot engine={engineRef.current} id={sel.tower!.id} tier={up.tier} />
+                      <span className={styles.buildName}>
+                        {t("td.tier")} {up.tier + 1}
+                      </span>
+                      <span className={styles.buildCost}><i className={styles.icon} data-icon="gold" /> {up.cost}</span>
+                    </button>
+                  ))
                 ) : (
                   <span className={styles.maxed}>{t("td.maxed")}</span>
                 )}
                 <button type="button" className={styles.buildBtn} onClick={() => engineRef.current?.sell()}>
-                  <i className={styles.icon} data-icon="sell" />
+                  <span className={styles.shotWrap}><i className={styles.icon} data-icon="sell" /></span>
                   <span className={styles.buildName}>{t("td.sell")}</span>
                   <span className={styles.buildCost}>+<i className={styles.icon} data-icon="gold" /> {sel.tower.sellValue}</span>
                 </button>

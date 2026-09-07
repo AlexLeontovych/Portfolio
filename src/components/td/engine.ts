@@ -119,6 +119,12 @@ export interface SelectionInfo {
     upgradeCost: number | null;
     sellValue: number;
     range: number;
+    /**
+     * Every tier still ahead of this one, each priced at what it costs to
+     * get there from here — so the top of the tree can be bought in one go
+     * for the same gold as climbing to it a step at a time.
+     */
+    upgrades: { tier: number; cost: number; range: number; blurb: string }[];
   } | null;
   affordable: Record<TowerId, boolean>;
 }
@@ -569,18 +575,57 @@ export class TdEngine {
 
   upgrade() {
     const t = this.towerAtSelection();
-    if (!t || t.tier >= 2) return;
-    const cost = TOWERS[t.id].tiers[t.tier + 1].cost;
+    if (t) this.upgradeTo(t.tier + 1);
+  }
+
+  /**
+   * Take a tower all the way to `tier` in one purchase.
+   *
+   * It costs the sum of the steps, so buying the top outright is worth
+   * exactly what climbing to it is worth and the balance does not move; what
+   * it saves is the three clicks and the wave that arrives during them.
+   */
+  upgradeTo(tier: number) {
+    const t = this.towerAtSelection();
+    const tiers = t && TOWERS[t.id].tiers;
+    if (!t || !tiers || tier <= t.tier || tier >= tiers.length) return;
+    let cost = 0;
+    for (let k = t.tier + 1; k <= tier; k++) cost += tiers[k].cost;
     if (this.gold < cost) return;
     this.gold -= cost;
     t.spent += cost;
-    t.tier++;
+    t.tier = tier;
     if (TOWERS[t.id].blocks) {
       t.soldiers = [];
       this.assignRally(t);
     }
     this.puff(t.x, t.y, 16, "#c6d831");
     this.emit();
+  }
+
+  /**
+   * Paint a tower as it would stand at some tier, for the menu to show.
+   *
+   * The menu used to offer an upgrade as a word and a price, which says
+   * nothing about what you are buying. This is the same frame the board
+   * draws — its resting pose, facing the camera — so the choice is made on
+   * the thing itself.
+   */
+  drawPreview(canvas: HTMLCanvasElement, id: TowerId, tier: number): boolean {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return false;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const def = TOWERS[id];
+    const name = def.blocks ? `b.keep.${tier + 1}.d` : `t.${def.art}.${tier + 1}.d`;
+    const frame = this.atlas?.frames[name];
+    if (!frame) return false;
+    // fit the frame in the box, then stand it on the bottom of it
+    const pad = 2;
+    const k = Math.min((canvas.width - pad * 2) / frame.w, (canvas.height - pad * 2) / frame.h);
+    ctx.imageSmoothingEnabled = false;
+    return drawSprite(ctx, this.atlas, name, canvas.width / 2 + (frame.w / 2 - frame.ax) * k,
+                      canvas.height - pad, { scale: k, frame: 0 });
   }
 
   sell() {
@@ -1089,6 +1134,19 @@ export class TdEngine {
               upgradeCost: t.tier < 2 ? TOWERS[t.id].tiers[t.tier + 1].cost : null,
               sellValue: Math.round(t.spent * SELL_REFUND),
               range: TOWERS[t.id].tiers[t.tier].range,
+              upgrades: TOWERS[t.id].tiers
+                .map((tier, i) => ({ tier: i, def: tier }))
+                .filter((e) => e.tier > t.tier)
+                .map((e) => ({
+                  tier: e.tier,
+                  cost: TOWERS[t.id].tiers
+                    .slice(t.tier + 1, e.tier + 1)
+                    .reduce((sum, x) => sum + x.cost, 0),
+                  range: e.def.range,
+                  blurb: TOWERS[t.id].blocks
+                    ? `${e.def.soldiers ?? 0} x ${e.def.soldierDamage ?? 0}`
+                    : `${e.def.damage} / ${e.def.reload.toFixed(1)}s`,
+                })),
             }
           : null,
       };

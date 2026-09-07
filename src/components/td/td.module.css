@@ -457,6 +457,26 @@
   font-size: 1.15rem;
   line-height: 1.1;
 }
+/*
+ * The tower's own picture in the menu, standing on the bottom of its box so
+ * a tall tier and a squat one line up on the same ground rather than floating
+ * at different heights next to each other.
+ */
+.shotWrap {
+  display: grid;
+  place-items: end center;
+  height: 58px;
+}
+.shot {
+  display: block;
+  width: 72px;
+  height: 58px;
+  image-rendering: auto;
+}
+.shotWrap .buildGlyph {
+  grid-area: 1 / 1;
+  align-self: center;
+}
 .buildName {
   font-family: var(--font-mono);
   font-size: 0.72rem;
