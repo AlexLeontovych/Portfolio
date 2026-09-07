@@ -145,6 +145,36 @@ def thin(pts):
     return keep
 
 
+def straighten(pts, reach=8, worth=60):
+    """
+    Take the loop out of a way that comes back to where it has already been.
+
+    A fork is stored complete, road and all, and the road is followed as far
+    as the junction the stroke was found to meet. On the glacier that junction
+    was eighty units PAST the point where the branch actually leaves: the way
+    went down the road, turned, climbed back and rejoined itself five units
+    from a point it had already walked. Two hundred and twenty units of going
+    nowhere, and on screen a column of creeps marching down and then turning
+    round, which reads as a mistake because it is one.
+
+    Any pair of points on a way that close together with that much walking
+    between them is such a loop, and the walking between them is dropped.
+    """
+    best = None
+    for j in range(len(pts)):
+        for i in range(j):
+            if math.dist(pts[i], pts[j]) > reach:
+                continue
+            gain = sum(math.dist(pts[k], pts[k + 1]) for k in range(i, j))
+            if gain > worth and (best is None or gain > best[0]):
+                best = (gain, i, j)
+    if not best:
+        return pts
+    gain, i, j = best
+    print(f"      cut {gain:.0f}u of doubling back at {tuple(map(round, pts[i]))}")
+    return pts[:i + 1] + pts[j:]
+
+
 def to_edge(p):
     """How far a point is from the nearest edge of the board."""
     return min(p[0], W - 1 - p[0], p[1], H - 1 - p[1])
@@ -212,6 +242,7 @@ def main():
                                           dtype=np.float64)))
             print(f"   {gi}: a lane of its own, in at {tuple(map(round, pts[0]))}, "
                   f"out at {tuple(map(round, pts[-1]))}")
+        pts = straighten(pts)
         length = sum(math.dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1))
         print(f"      {len(pts)} points, {length:.0f}u, ends {to_edge(pts[0]):.0f} and "
               f"{to_edge(pts[-1]):.0f} from the edge of the board")
