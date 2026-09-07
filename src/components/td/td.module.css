@@ -465,12 +465,12 @@
 .shotWrap {
   display: grid;
   place-items: end center;
-  height: 58px;
+  height: 78px;
 }
 .shot {
   display: block;
-  width: 72px;
-  height: 58px;
+  width: 80px;
+  height: 78px;
   image-rendering: auto;
 }
 .shotWrap .buildGlyph {

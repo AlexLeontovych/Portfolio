@@ -56,7 +56,7 @@ function TowerShot({ engine, id, tier }: {
   }, [engine, id, tier]);
   return (
     <span className={styles.shotWrap}>
-      <canvas ref={ref} width={72} height={58} className={styles.shot} />
+      <canvas ref={ref} width={80} height={78} className={styles.shot} />
       {!drawn && <span className={styles.buildGlyph}>{TOWER_GLYPH[id]}</span>}
     </span>
   );

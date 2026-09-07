@@ -322,6 +322,8 @@ export class TdEngine {
   private selected: number | null = null;
 
   private view = { scale: 1, ox: 0, oy: 0 };
+  /** the biggest menu picture there is, which sets the scale of all of them */
+  private previewBox: { w: number; h: number } | null = null;
   private t = 0;
   private acc = 0;
   private last = 0;
@@ -616,16 +618,55 @@ export class TdEngine {
     if (!ctx) return false;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const def = TOWERS[id];
-    const name = def.blocks ? `b.keep.${tier + 1}.d` : `t.${def.art}.${tier + 1}.d`;
-    const frame = this.atlas?.frames[name];
-    if (!frame) return false;
-    // fit the frame in the box, then stand it on the bottom of it
-    const pad = 2;
-    const k = Math.min((canvas.width - pad * 2) / frame.w, (canvas.height - pad * 2) / frame.h);
+    const name = this.previewName(id, tier);
+    const frame = name ? this.atlas?.frames[name] : undefined;
+    if (!name || !frame) return false;
+
+    // ONE scale for every picture in every menu, taken from the biggest of
+    // them. Fitting each frame to its own box instead blew a small tower up
+    // to the size of a large one and shrank the large one to match — two
+    // tiers of the same tower came out different sizes, which is exactly the
+    // comparison the menu exists to make. Never enlarged past its own pixels.
+    const pad = 3;
+    const k = this.previewScale(canvas.width - pad * 2, canvas.height - pad * 2);
+
+    // and it is placed by its own outline, not by the anchor the board uses:
+    // the anchor sits at the tower's base, some way up from the bottom of the
+    // frame, so anchoring to the foot of the box hung the rest of the base
+    // below it and the picture lost its feet off the bottom edge
     ctx.imageSmoothingEnabled = false;
-    return drawSprite(ctx, this.atlas, name, canvas.width / 2 + (frame.w / 2 - frame.ax) * k,
-                      canvas.height - pad, { scale: k, frame: 0 });
+    return drawSprite(ctx, this.atlas, name,
+                      canvas.width / 2 - (frame.w / 2 - frame.ax) * k,
+                      canvas.height - pad - (frame.h - frame.ay) * k,
+                      { scale: k, frame: 0 });
+  }
+
+  /** The atlas frame that stands for a tower at a tier: its resting front view. */
+  private previewName(id: TowerId, tier: number): string | null {
+    const def = TOWERS[id];
+    if (def.blocks) return `b.keep.${tier + 1}.d`;
+    return def.art ? `t.${def.art}.${tier + 1}.d` : null;
+  }
+
+  /** How much every menu picture is scaled by, so they are all comparable. */
+  private previewScale(boxW: number, boxH: number): number {
+    if (!this.previewBox) {
+      let w = 0;
+      let h = 0;
+      for (const id of Object.keys(TOWERS) as TowerId[]) {
+        for (let tier = 0; tier < TOWERS[id].tiers.length; tier++) {
+          const name = this.previewName(id, tier);
+          const f = name ? this.atlas?.frames[name] : undefined;
+          if (f) {
+            w = Math.max(w, f.w);
+            h = Math.max(h, f.h);
+          }
+        }
+      }
+      if (!w || !h) return 1;
+      this.previewBox = { w, h };
+    }
+    return Math.min(1, boxW / this.previewBox.w, boxH / this.previewBox.h);
   }
 
   sell() {
