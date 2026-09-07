@@ -355,7 +355,17 @@ export default function Td() {
                     </button>
                   ))
                 ) : (
-                  <span className={styles.maxed}>{t("td.maxed")}</span>
+                  <div className={styles.maxed} title={t("td.maxed")}>
+                    <TowerShot engine={engineRef.current} id={sel.tower.id} tier={sel.tower.tier} />
+                    <span className={styles.buildName}>
+                      {t("td.tier")} {sel.tower.tier + 1}
+                    </span>
+                    <span className={styles.maxedTag}>
+                      <i className={styles.pip} />
+                      {t("td.max")}
+                      <i className={styles.pip} />
+                    </span>
+                  </div>
                 )}
                 <button type="button" className={styles.buildBtn} onClick={() => engineRef.current?.sell()}>
                   <span className={styles.shotWrap}><i className={styles.icon} data-icon="sell" /></span>

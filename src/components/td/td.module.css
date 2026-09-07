@@ -17,9 +17,16 @@
 .card,
 .maxed {
   border-style: solid;
-  border-width: var(--tdui-paper-border);
-  border-image-source: var(--tdui-paper);
-  border-image-slice: var(--tdui-paper-slice) fill;
+  border-width: var(--tdui-button-border);
+  border-image-source: var(--tdui-button);
+  border-image-slice: var(--tdui-button-slice) fill;
+  border-image-repeat: stretch;
+}
+.maxedTag {
+  border-style: solid;
+  border-width: var(--tdui-chip-lit-border);
+  border-image-source: var(--tdui-chip-lit);
+  border-image-slice: var(--tdui-chip-lit-slice) fill;
   border-image-repeat: stretch;
 }
 
@@ -486,13 +493,39 @@
   font-family: var(--font-pixel);
   font-size: 0.46rem;
 }
+/*
+ * A finished tower keeps its place in the row rather than being replaced by a
+ * line of text. It is the same card as the upgrades beside it — the tower's
+ * own picture, what tier it reached — with the price swapped for a lit chip,
+ * so the row reads as three cards and not two cards and a note.
+ */
 .maxed {
   display: grid;
+  gap: 0.12rem;
   place-items: center;
   width: 88px;
-  color: var(--leaf);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
+  padding: 0.45rem 0.3rem 0.5rem;
+  color: var(--parch);
+  cursor: default;
+}
+.maxed .shotWrap {
+  filter: drop-shadow(0 0 6px rgba(255, 206, 92, 0.45));
+}
+.maxedTag {
+  display: inline-flex;
+  gap: 0.22rem;
+  align-items: center;
+  padding: 0.06rem 0.34rem 0.1rem;
+  color: #33200a;
+  font-family: var(--font-pixel);
+  font-size: 0.44rem;
+  letter-spacing: 0.1em;
+}
+.pip {
+  width: 4px;
+  height: 4px;
+  background: #6a4410;
+  transform: rotate(45deg);
 }
 
 /* ---------- end cards ---------- */
