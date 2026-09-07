@@ -1056,7 +1056,6 @@ export class TdEngine {
       c.dead = true;
       c.dying = 0;
       c.anim?.play("death", true);
-      this.audio.play(c.def.voice, c.def.boss ? 1 : 0.8);
       this.gold += Math.round(c.def.gold * DIFFICULTIES[this.diff].gold_rate);
       this.puff(this.creepPos(c).x, this.creepPos(c).y, 10, "#ffd45e");
       for (const s of this.towers.flatMap((t) => t.soldiers)) if (s.target === c) s.target = null;

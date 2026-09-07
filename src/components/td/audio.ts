@@ -11,7 +11,7 @@ export type Cue =
   | "select" | "click" | "build" | "upgrade" | "sell" | "deny" | "arm"
   | "bow" | "bolt" | "cannon" | "gun" | "boom" | "hit"
   | "swing" | "clash"
-  | "dieSoft" | "dieYelp" | "dieBony" | "dieShade" | "soldierDie" | "boss"
+  | "soldierDie" | "boss"
   | "wave" | "leak" | "coins" | "gate"
   | "fireball" | "rain" | "heal"
   | "win" | "lose";

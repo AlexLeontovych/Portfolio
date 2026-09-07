@@ -70,7 +70,7 @@ close to the source of this game's aesthetic as an asset pack gets.
 ## Sound — IRONWOOD KEEP tower defense
 
 Every effect in the game is cut from five public-domain packs and laid end to end into one
-sprite (`public/games/td/audio/sfx.m4a`, 263 kB for thirty cues) by `scripts/td_audio.py`,
+sprite (`public/games/td/audio/sfx.m4a`, 213 kB for twenty-six cues) by `scripts/td_audio.py`,
 which names the exact file it takes out of each. The packs themselves are not in this
 repository; the script plus this list is enough to rebuild the whole soundtrack.
 
@@ -80,13 +80,13 @@ the barracks door) and Music Jingles (the two endings).
 
 **artisticdude** — [RPG Sound Pack](https://opengameart.org/content/rpg-sound-pack) and
 [Battle Sound Effects](https://opengameart.org/content/battle-sound-effects) · Licence: CC0
-The bow, the sword swings, and what a mushroom, a wraith and a soldier each sound like on the
-way down.
+The bow, the sword swings, the fall of a soldier and the roar of whatever has just reached
+the keep.
 
 **rubberduck** — [80 CC0 RPG SFX](https://opengameart.org/content/80-cc0-rpg-sfx) and
 [25 CC0 bang / firework SFX](https://opengameart.org/content/25-cc0-bang-sfx) · Licence: CC0
-Blades, the creatures' voices, the spells, and the cannon and its burst — the last recorded
-from actual fireworks.
+Blades, the boss's roar, the spells, and the cannon and its burst — the last recorded from
+actual fireworks.
 
 The music is one track per biome, cut to a loop and re-encoded to about a megabyte each. They
 are fetched when a level on that biome is started, and not before:

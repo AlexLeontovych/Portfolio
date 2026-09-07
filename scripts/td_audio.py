@@ -62,23 +62,12 @@ CUES = {
         ("rpg-sfx-80", "blade_02.ogg", 0.35, 0, 0),
         ("rpg-sfx-80", "blade_03.ogg", 0.35, 0, 0),
     ],
-    # --------------------------------------------------------- the dying ---
-    "dieSoft": [                                        # mushrooms
-        ("rpg-sound-pack", "slime1.wav", 0.5, 0, 0),
-        ("rpg-sound-pack", "slime6.wav", 0.5, 0, 0),
-    ],
-    "dieYelp": [                                        # goblins
-        ("rpg-sfx-80", "creature_hurt_01.ogg", 0.5, 0, 0),
-        ("rpg-sfx-80", "creature_hurt_02.ogg", 0.5, 0, 0),
-    ],
-    "dieBony": [                                        # skeletons
-        ("rpg-sfx-80", "item_stone_02.ogg", 0.5, 0, 0),
-        ("rpg-sfx-80", "item_stone_04.ogg", 0.5, 0, 0),
-    ],
-    "dieShade": [                                       # eyes and wraiths
-        ("rpg-sound-pack", "shade3.wav", 0.45, 0, 0),
-        ("rpg-sound-pack", "shade8.wav", 0.45, 0, 0),
-    ],
+    # ------------------------------------------------------------ the fallen ---
+    #
+    # Only ours. The creeps died out loud for a while — a pack's worth of
+    # grunts and squelches and wails — and every one of them was some other
+    # animal than the thing on the screen. What kills a creep is already
+    # heard; the creep itself goes quietly now.
     "soldierDie": [("rpg-sound-pack", "chainmail1.wav", 0.6, 0, 0)],
     "boss":       [("rpg-sfx-80", "creature_roar_01.ogg", 0.8, 0, 0)],
     # ------------------------------------------------------------ the board ---
