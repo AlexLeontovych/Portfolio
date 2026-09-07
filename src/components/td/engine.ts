@@ -17,8 +17,8 @@ import { BOARD, LEVELS, loadLevel, waveSize, type Level } from "./levels";
 import { MAPS } from "./maps";
 import { distanceToPath, headingAt, pointAt, type Point } from "./path";
 import {
-  CREEPS, DIFFICULTIES, SELL_REFUND, TOWERS, applyDamage,
-  type CreepDef, type CreepId, type DifficultyId, type TowerId,
+  CREEPS, DIFFICULTIES, SELL_REFUND, SPELLS, SPELL_ORDER, TOWERS, applyDamage,
+  type CreepDef, type CreepId, type DifficultyId, type SpellId, type TowerId,
 } from "./units";
 
 const STEP = 1 / 60;
@@ -58,6 +58,22 @@ const FALL_TIME = 0.8;
 const SWING_TIME = 0.9;
 /** Seconds before the barracks has another man ready. */
 const MUSTER_TIME = 9;
+/**
+ * What a soldier gets back each second while nothing is fighting him.
+ *
+ * A barracks that cannot heal is a barracks that loses a man to every wave
+ * and spends the next nine seconds without one. Standing off the line and
+ * getting his breath back is what lets the same three men hold a road all
+ * game, and it is slow enough — a fifth of him a second — that pulling them
+ * out of a fight is a real decision rather than a free one.
+ */
+const SOLDIER_REGEN = 0.2;
+/** A spell's sixteen frames, at the pack's own twelve a second. */
+const SPELL_FPS = 12;
+const SPELL_FRAMES = 16;
+/** Where the ground ring sits inside a published cell, and how big the cell is. */
+const SPELL_CELL = 160;
+const SPELL_ANCHOR = { x: 80, y: 148 };
 /**
  * How far outside the ring a soldier will follow someone before letting go.
  *
@@ -105,6 +121,8 @@ export interface Hud {
   levelName: string;
   /** the slot the player has selected, if any */
   selected: SelectionInfo | null;
+  /** what each spell costs, whether it can be paid for, and its cooldown */
+  spells: { id: SpellId; gold: number; ready: number; armed: boolean }[];
 }
 
 export interface SelectionInfo {
@@ -234,6 +252,16 @@ interface Puff {
   colour: string;
 }
 
+/** A spell in the air: where it landed, how far through it is, what is left to do. */
+interface Cast {
+  id: SpellId;
+  x: number;
+  y: number;
+  t: number;
+  /** damage or healing not yet handed out, for the ones that work over time */
+  left: number;
+}
+
 /** One playthrough of the blast sheet, left where a shell landed. */
 interface Blast {
   x: number;
@@ -312,6 +340,12 @@ export class TdEngine {
   private shots: Shot[] = [];
   private puffs: Puff[] = [];
   private blasts: Blast[] = [];
+  private casts: Cast[] = [];
+  private spellSheets: Partial<Record<SpellId, HTMLImageElement>> = {};
+  private cooling: Partial<Record<SpellId, number>> = {};
+  /** the spell the player has bought a cast of and not yet placed */
+  private armed: SpellId | null = null;
+  private aimAt: Point | null = null;
 
   private gold = 0;
   private lives = 0;
@@ -353,6 +387,8 @@ export class TdEngine {
       }).map(async (file) =>
         [file, await loadImage(`./games/td/maps/${file}`).catch(() => null)] as const),
     );
+    const spells = Promise.all(SPELL_ORDER.map(async (id) =>
+      [id, await loadImage(`./games/td/spells/${SPELLS[id].sheet}`).catch(() => null)] as const));
     const kinds = [...new Set(Object.values(CREEPS).map((c) => c.sheet))];
     const sets = await Promise.all(
       kinds.map((sheet) =>
@@ -371,6 +407,9 @@ export class TdEngine {
     kinds.forEach((k, i) => {
       if (sets[i]) this.creepSets[k] = sets[i] as AnimSet;
     });
+    for (const [id, img] of await spells) {
+      if (img) this.spellSheets[id] = img;
+    }
   }
 
   start(levelIdx: number, diff: DifficultyId) {
@@ -537,8 +576,70 @@ export class TdEngine {
     return { x: (px - this.view.ox) / this.view.scale, y: (py - this.view.oy) / this.view.scale };
   }
 
+  /**
+   * Buy a cast, or give the money back.
+   *
+   * The gold is taken when the spell is armed rather than when it lands, so
+   * the price is paid for the decision and the board cannot be used as a
+   * free range-finder. Arming a second time puts it back.
+   */
+  arm(id: SpellId) {
+    if (this.phase !== "playing") return;
+    if (this.armed === id) {
+      this.gold += SPELLS[id].gold;
+      this.armed = null;
+      this.emit();
+      return;
+    }
+    if (this.armed) this.gold += SPELLS[this.armed].gold;
+    this.armed = null;
+    if ((this.cooling[id] ?? 0) > 0 || this.gold < SPELLS[id].gold) {
+      this.emit();
+      return;
+    }
+    this.gold -= SPELLS[id].gold;
+    this.armed = id;
+    this.selected = null;
+    this.emit();
+  }
+
+  /** Where the pointer is, so an armed spell can show what it would cover. */
+  aim(px: number, py: number) {
+    this.aimAt = this.armed ? this.toBoard(px, py) : null;
+  }
+
+  /** Paint a spell at its liveliest frame, for the button that buys it. */
+  drawSpellIcon(canvas: HTMLCanvasElement, id: SpellId): boolean {
+    const ctx = canvas.getContext("2d");
+    const img = this.spellSheets[id];
+    if (!ctx || !img) return false;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const f = 5;                       // the burst, which reads at any size
+    const k = Math.min(canvas.width, canvas.height) / SPELL_CELL;
+    ctx.drawImage(
+      img,
+      (f % 4) * SPELL_CELL, Math.floor(f / 4) * SPELL_CELL, SPELL_CELL, SPELL_CELL,
+      (canvas.width - SPELL_CELL * k) / 2, (canvas.height - SPELL_CELL * k) / 2,
+      SPELL_CELL * k, SPELL_CELL * k,
+    );
+    return true;
+  }
+
   pick(px: number, py: number) {
     const p = this.toBoard(px, py);
+    if (this.armed) {
+      const id = this.armed;
+      this.armed = null;
+      this.cooling[id] = SPELLS[id].cooldown;
+      const def = SPELLS[id];
+      this.casts.push({
+        id, x: p.x, y: p.y, t: 0,
+        left: def.heal ?? def.damage ?? 0,
+      });
+      this.emit();
+      return;
+    }
     let best = -1;
     let bestD = 34;
     this.level.slots.forEach((s, i) => {
@@ -752,7 +853,12 @@ export class TdEngine {
     this.updateCreeps(dt);
     this.updateTowers(dt);
     this.updateShots(dt);
+    this.updateCasts(dt);
     this.updateBlasts(dt);
+    for (const id of SPELL_ORDER) {
+      const left = this.cooling[id] ?? 0;
+      if (left > 0) this.cooling[id] = Math.max(0, left - dt);
+    }
     this.updatePuffs(dt);
     if ((this.frame = (this.frame + 1) % 10) === 0) this.emit();
   }
@@ -1004,6 +1110,13 @@ export class TdEngine {
         continue;
       }
 
+      // out of a fight, he gets his breath back. Slowly enough that pulling
+      // a hurt man off the line is a decision, and fast enough that a
+      // barracks is not one bad wave from holding nothing
+      if (!s.target && s.hp < s.maxHp) {
+        s.hp = Math.min(s.maxHp, s.hp + SOLDIER_REGEN * dt);
+      }
+
       // whoever he was holding may have died, or been taken by someone else
       if (s.target && (s.target.dead || s.target.blocker !== s)) s.target = null;
       // ...and anyone he is holding who has walked out of the ring is let go
@@ -1082,6 +1195,57 @@ export class TdEngine {
   /** The doorway of a barracks: a step out of the building, road side. */
   private gateOf(t: Tower): Point {
     return { x: t.x + Math.cos(t.angle) * 12, y: t.y + Math.sin(t.angle) * 12 + 4 };
+  }
+
+  /**
+   * What a spell does once it has landed.
+   *
+   * A fireball hands over its whole damage at the moment it bursts; the arrow
+   * rain and the healing aura hand theirs out a little each tick across a
+   * second or so, which is what makes them read as a shower and a wave rather
+   * than two more explosions.
+   *
+   * The aura is the light side's answer to a barracks losing men: it heals
+   * whoever is standing in it and brings the fallen back on their feet
+   * early, so a road that was about to break can be held instead.
+   */
+  private updateCasts(dt: number) {
+    for (const c of this.casts) {
+      const def = SPELLS[c.id];
+      const was = c.t;
+      c.t += dt;
+      if (c.t < def.strike || c.left <= 0) continue;
+      const over = def.over ?? 0;
+      let share = c.left;
+      if (over > 0) {
+        const from = Math.max(def.strike, was);
+        share = Math.min(c.left, (def.heal ?? def.damage ?? 0) * (c.t - from) / over);
+      }
+      if (share <= 0) continue;
+      c.left -= share;
+      if (def.damage) {
+        for (const creep of this.creeps) {
+          if (creep.dead) continue;
+          const p = this.creepPos(creep);
+          if (Math.hypot(p.x - c.x, p.y - c.y) > def.radius) continue;
+          this.hurtCreep(creep, share, def.kind ?? "magic");
+        }
+      }
+      if (def.heal) {
+        for (const t of this.towers) {
+          for (const sd of t.soldiers) {
+            if (Math.hypot(sd.x - c.x, sd.y - c.y) > def.radius) continue;
+            if (sd.dead) {
+              // an aura over the fallen has them up in a third of the wait
+              sd.respawn = Math.min(sd.respawn, MUSTER_TIME / 3);
+              continue;
+            }
+            sd.hp = Math.min(sd.maxHp, sd.hp + share);
+          }
+        }
+      }
+    }
+    this.casts = this.casts.filter((c) => c.t < SPELL_FRAMES / SPELL_FPS);
   }
 
   /* -------------------------------- shots ---------------------------------- */
@@ -1203,6 +1367,12 @@ export class TdEngine {
       speed: this.speed,
       levelName: this.level.def.name,
       selected: info,
+      spells: SPELL_ORDER.map((id) => ({
+        id,
+        gold: SPELLS[id].gold,
+        ready: Math.max(0, this.cooling[id] ?? 0),
+        armed: this.armed === id,
+      })),
     });
   }
 
@@ -1261,6 +1431,8 @@ export class TdEngine {
     const gates = this.level.overlay ? this.maps[this.level.overlay] : undefined;
     if (gates) ctx.drawImage(gates, 0, 0, BOARD.w, BOARD.h);
     this.drawShots(ctx);
+    this.drawCasts(ctx);
+    this.drawAim(ctx);
     this.drawBlasts(ctx);
     this.drawPuffs(ctx);
     ctx.restore();
@@ -1739,6 +1911,46 @@ export class TdEngine {
     ctx.fillRect(s.x - 10, s.y - 34, 20, 4);
     ctx.fillStyle = "#6ad0ff";
     ctx.fillRect(s.x - 9, s.y - 33, 18 * f, 2);
+  }
+
+  /**
+   * A spell on the ground, its ring where the player put it.
+   *
+   * The sheet was laid out with the ring in the same place in every cell, so
+   * one anchor serves all sixteen frames, and the whole cell is scaled to
+   * whatever reach the spell has rather than drawn at the size it was cut.
+   */
+  private drawCasts(ctx: CanvasRenderingContext2D) {
+    for (const c of this.casts) {
+      const img = this.spellSheets[c.id];
+      if (!img) continue;
+      const def = SPELLS[c.id];
+      const f = Math.min(SPELL_FRAMES - 1, Math.floor(c.t * SPELL_FPS));
+      const k = (def.radius * 2) / SPELL_CELL;
+      ctx.drawImage(
+        img,
+        (f % 4) * SPELL_CELL, Math.floor(f / 4) * SPELL_CELL, SPELL_CELL, SPELL_CELL,
+        c.x - SPELL_ANCHOR.x * k, c.y - SPELL_ANCHOR.y * k,
+        SPELL_CELL * k, SPELL_CELL * k,
+      );
+    }
+  }
+
+  /** What an armed spell would cover, drawn under the pointer until it lands. */
+  private drawAim(ctx: CanvasRenderingContext2D) {
+    if (!this.armed || !this.aimAt) return;
+    const r = SPELLS[this.armed].radius;
+    const p = this.aimAt;
+    ctx.save();
+    ctx.strokeStyle = SPELLS[this.armed].heal ? "#7ee06a" : "#ffb347";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 6]);
+    ctx.beginPath();
+    // an ellipse, because the maps are drawn from an angle and a circle on
+    // the ground is not a circle on the screen
+    ctx.ellipse(p.x, p.y, r, r * 0.62, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   private drawShots(ctx: CanvasRenderingContext2D) {

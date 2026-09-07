@@ -7,7 +7,10 @@ import { Close } from "../Icons";
 import { LEVELS } from "./levels";
 import { MAPS } from "./maps";
 import { TdEngine, type Hud, type Phase } from "./engine";
-import { DIFFICULTIES, TOWERS, type DifficultyId, type TowerId } from "./units";
+import {
+  DIFFICULTIES, SPELLS, TOWERS,
+  type DifficultyId, type SpellId, type TowerId,
+} from "./units";
 import styles from "./td.module.css";
 import { UI_VARS } from "./ui";
 
@@ -60,6 +63,29 @@ function TowerShot({ engine, id, tier }: {
       {!drawn && <span className={styles.buildGlyph}>{TOWER_GLYPH[id]}</span>}
     </span>
   );
+}
+
+/**
+ * A spell on its button, taken from the same sheet the board draws it with.
+ *
+ * A price and a word do not say what a spell does; the burst frame does, and
+ * it is the one the player will see land.
+ */
+function SpellShot({ engine, id }: { engine: TdEngine | null; id: SpellId }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    let alive = true;
+    const paint = () => {
+      const cv = ref.current;
+      return !(!alive || !cv || !engine) && engine.drawSpellIcon(cv, id);
+    };
+    if (!paint()) {
+      const again = window.setTimeout(paint, 250);
+      return () => { alive = false; window.clearTimeout(again); };
+    }
+    return () => { alive = false; };
+  }, [engine, id]);
+  return <canvas ref={ref} width={44} height={44} className={styles.spellShot} />;
 }
 
 export default function Td() {
@@ -156,6 +182,14 @@ export default function Td() {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open, screen, phase, hud]);
 
+  const onCanvasMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const r = canvas.getBoundingClientRect();
+    const dpr = canvas.width / r.width;
+    engineRef.current?.aim((e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr);
+  };
+
   const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -183,6 +217,7 @@ export default function Td() {
         className={styles.canvas}
         data-hidden={screen !== "game"}
         onClick={onCanvasClick}
+        onMouseMove={onCanvasMove}
       />
 
       <button type="button" className={styles.close} onClick={() => td.close()} aria-label={t("td.exit")}>
@@ -289,6 +324,36 @@ export default function Td() {
             >
               {phase === "paused" ? "▶" : "❚❚"}
             </button>
+          </div>
+
+          {/*
+            * The spell bar. It buys a cast, not a spell: the gold goes when
+            * a button is pressed and the next click on the board is where it
+            * lands, so the choice is made before the aiming rather than
+            * during it. Pressing the same button again gives the money back.
+            */}
+          <div className={styles.spells}>
+            {hud.spells.map((sp) => {
+              const def = SPELLS[sp.id];
+              const cooling = sp.ready > 0;
+              return (
+                <button
+                  key={sp.id}
+                  type="button"
+                  className={`${styles.spell} ${sp.armed ? styles.spellArmed : ""}`}
+                  disabled={!sp.armed && (cooling || hud.gold < sp.gold)}
+                  onClick={() => engineRef.current?.arm(sp.id)}
+                  title={t(`td.spell_${sp.id}_blurb`)}
+                >
+                  <SpellShot engine={engineRef.current} id={sp.id} />
+                  <span className={styles.buildName}>{t(`td.spell_${sp.id}`)}</span>
+                  <span className={styles.buildCost}>
+                    <i className={styles.icon} data-icon="gold" /> {def.gold}
+                  </span>
+                  {cooling && <span className={styles.spellWait}>{Math.ceil(sp.ready)}</span>}
+                </button>
+              );
+            })}
           </div>
 
           {hud.countdown !== null && phase === "playing" && (

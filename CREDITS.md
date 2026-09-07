@@ -49,6 +49,13 @@ thatched roof does not.
 
 The creeps are the same LuizMelo sheets the platformer uses, credited above.
 
+## Spells — IRONWOOD KEEP tower defense
+
+The three area spells (`public/games/td/spells/`) are generated for this project: sixteen frames
+each of a fireball, a rain of arrows and a healing aura, drawn in the maps' own perspective.
+`scripts/td_spells.py` re-lays them on a true grid and puts every frame's ground ring in the same
+place in its cell, so a spell is aimed at one point rather than at wherever that frame drifted to.
+
 ## UI — IRONWOOD KEEP tower defense
 
 **Tiny Swords** — [Pixel Frog](https://pixelfrog-assets.itch.io/tiny-swords)

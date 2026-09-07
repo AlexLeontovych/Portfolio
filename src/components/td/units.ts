@@ -226,3 +226,54 @@ export function applyDamage(raw: number, kind: DamageKind, c: CreepDef): number 
   if (kind === "magic") return raw * (1 - c.resist);
   return Math.max(raw * ARMOUR_FLOOR, raw - c.armour);
 }
+
+/* ------------------------------- spells ---------------------------------- */
+
+export type SpellId = "fireball" | "arrows" | "heal";
+
+export interface SpellDef {
+  name: string;
+  /** the sheet under public/games/td/spells */
+  sheet: string;
+  gold: number;
+  /** seconds before it can be cast again */
+  cooldown: number;
+  /** how far the effect reaches from where it lands, in board units */
+  radius: number;
+  /** what it does, all at once for a blast or spread over `over` seconds */
+  damage?: number;
+  kind?: DamageKind;
+  heal?: number;
+  over?: number;
+  /** seconds into the sixteen frames before the effect lands */
+  strike: number;
+}
+
+/**
+ * Three things a player can buy in the middle of a wave.
+ *
+ * A tower is a decision about the map; a spell is a decision about the
+ * moment, and the two want different prices. These cost about what a tower
+ * costs and are gone when they are cast, so reaching for one is giving up a
+ * building — which is the whole of the choice.
+ *
+ * The healing aura is the odd one: it is worth nothing at all unless there
+ * are men on the road to heal, so it only pays for itself on a map where a
+ * barracks is holding something. That is deliberate.
+ */
+export const SPELLS: Record<SpellId, SpellDef> = {
+  fireball: {
+    name: "Fireball", sheet: "fireball.webp", gold: 90, cooldown: 22,
+    radius: 74, damage: 120, kind: "magic", strike: 0.42,
+  },
+  arrows: {
+    name: "Arrow Rain", sheet: "arrow_rain.webp", gold: 70, cooldown: 18,
+    radius: 84, damage: 150, kind: "physical", over: 1.1, strike: 0.25,
+  },
+  heal: {
+    name: "Healing Aura", sheet: "healing_aura.webp", gold: 60, cooldown: 16,
+    radius: 96, heal: 130, over: 1.2, strike: 0.2,
+  },
+};
+
+export const SPELL_ORDER: SpellId[] = ["fireball", "arrows", "heal"];

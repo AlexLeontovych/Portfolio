@@ -43,6 +43,7 @@
 .buildBtn,
 .levelCard,
 .diff,
+.spell,
 .ghost {
   border-style: solid;
   border-width: var(--tdui-button-border);
@@ -55,6 +56,8 @@
 .levelCard:active:not(:disabled),
 .diff:active,
 .ghost:active,
+.spell:active:not(:disabled),
+.spellArmed,
 .levelSel,
 .diffSel {
   border-width: var(--tdui-button-down-border);
@@ -526,6 +529,51 @@
   height: 4px;
   background: #6a4410;
   transform: rotate(45deg);
+}
+
+/*
+ * The spell bar: three cards down the left, out of the way of the build menu
+ * at the bottom and the HUD along the top.
+ */
+.spells {
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.spell {
+  display: grid;
+  gap: 0.1rem;
+  place-items: center;
+  width: 74px;
+  padding: 0.35rem 0.25rem 0.4rem;
+  color: var(--parch);
+  cursor: pointer;
+  position: relative;
+}
+.spell:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.spellShot {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+/* the seconds left, sat over the picture it is waiting on */
+.spellWait {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 14, 22, 0.62);
+  color: var(--gold);
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
 }
 
 /* ---------- end cards ---------- */
