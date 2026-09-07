@@ -12,7 +12,7 @@
  */
 
 import { Animator, loadAnimSet, loadImage, type AnimSet } from "../platformer/sprites";
-import { drawSprite, loadAtlas, type Atlas } from "./atlas";
+import { drawSprite, loadAtlas, restFrame, type Atlas } from "./atlas";
 import { BOARD, LEVELS, loadLevel, waveSize, type Level } from "./levels";
 import { MAPS } from "./maps";
 import { TdAudio, type Track } from "./audio";
@@ -1722,8 +1722,10 @@ export class TdEngine {
         // one sheet per facing, six frames each: the tower turns to whichever
         // quarter it last aimed at and runs the six once per shot
         const face = FACING[(Math.round(t.angle / (Math.PI / 2)) + 4) % 4];
-        const phase = t.fire < 0 ? 0 : Math.min(5, 1 + Math.floor((t.fire / FIRE_TIME) * 5));
         const name = `t.${art}.${tier + 1}.${face}`;
+        const phase = t.fire < 0
+          ? restFrame(this.atlas, name)
+          : Math.min(5, 1 + Math.floor((t.fire / FIRE_TIME) * 5));
         if (drawSprite(ctx, this.atlas, name, t.x, t.y, { frame: phase })) {
           this.drawTierPips(ctx, t.x, t.y + 15, tier);
           if (sel) this.drawRange(ctx, t);

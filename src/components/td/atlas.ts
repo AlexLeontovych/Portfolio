@@ -27,6 +27,8 @@ export interface AtlasEntry {
   /** the anchor, measured from the frame's top-left corner */
   ax: number;
   ay: number;
+  /** the frame this sprite stands in when nothing is happening; 0 if absent */
+  rest?: number;
 }
 
 export type Atlas = {
@@ -100,6 +102,17 @@ export function drawSprite(
   );
   ctx.restore();
   return true;
+}
+
+/**
+ * The frame a sprite stands in between animations.
+ *
+ * Almost always the first one. A sprite whose artist drew the resting pose
+ * somewhere else in the strip says so in the atlas rather than making every
+ * caller remember it.
+ */
+export function restFrame(atlas: Atlas | null, name: string): number {
+  return atlas?.frames[name]?.rest ?? 0;
 }
 
 /** Height of a sprite in board units, for laying out what sits above it. */

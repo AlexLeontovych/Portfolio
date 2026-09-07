@@ -66,6 +66,17 @@ PACKS = {
 # one box and scaled together, and the group's FIRST entry sets that scale.
 #: the four rows of a tower sheet, top to bottom
 FACINGS = "urdl"
+# Which frame a sprite STANDS in, where that is not the first one.
+#
+# A tower spends most of the game on frame 0 and runs the other five when it
+# fires. The level-two cannon facing away is drawn resting with both barrels
+# lowered, and from behind two lowered barrels read as one — the level-one
+# silhouette exactly. Frame 1 is the same tower with the barrels up, which is
+# what tells you it is a level two, and the shot then starts from the pose it
+# was already standing in.
+REST = {
+    "t.cannon.2.u": 1,
+}
 TOWER_KINDS = ("crossbow", "cannon", "magic", "rocket")
 #: height a tower's trimmed frame is drawn at on the 960x540 board
 TOWER_DRAW = 68
@@ -377,6 +388,8 @@ def main():
         index[c["name"]] = {"x": c["x"], "y": c["y"], "w": c["fw"], "h": c["fh"],
                             "n": c["n"], "row": c["per_row"],
                             "ax": c["ax"], "ay": c["ay"]}
+        if c["name"] in REST:
+            index[c["name"]]["rest"] = REST[c["name"]]
 
     # WebP, and lossy unless there is pixel art in here: the painted sheets
     # are three times smaller for no visible loss, but lossy ringing around a
