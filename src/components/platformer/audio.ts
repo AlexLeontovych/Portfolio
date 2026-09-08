@@ -10,7 +10,7 @@
 import { sound } from "../../lib/muted";
 
 type Voice = "jump" | "land" | "swing" | "hitEnemy" | "hurt" | "coin" | "heart"
-  | "step" | "enemySwing" | "block"
+  | "step" | "enemySwing" | "block" | "airJump"
   | "kill" | "spear" | "charge" | "slam" | "die" | "clear" | "select"
   | "dash" | "pogo" | "throw" | "checkpoint"
   | "bossCast" | "bossHurt" | "bossDie";
@@ -116,6 +116,12 @@ export class GameAudio {
     switch (v) {
       case "jump":
         this.tone(330, 0.16, "square", 0.16, 620);
+        break;
+      case "airJump":
+        // the same shape a fifth higher, with a breath of air under it: heard
+        // as the same move again rather than as a different one
+        this.tone(495, 0.14, "square", 0.13, 930);
+        this.noise(0.1, 0.07, 900, 6000);
         break;
       case "land":
         this.noise(0.08, 0.16, 120, 1400);

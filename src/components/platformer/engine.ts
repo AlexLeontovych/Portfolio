@@ -51,6 +51,22 @@ const JUMP_SPEED = 820;
 /** holding jump longer keeps you rising — the classic variable-height jump */
 const JUMP_CUT = 0.45;
 const COYOTE = 0.1; // grace period to still jump just after walking off a ledge
+/**
+ * One more jump, taken in the air.
+ *
+ * It is a little weaker than the first and it throws away whatever downward
+ * speed had built up, so it works as well out of a long fall as off the top
+ * of a hop — a second jump that cannot save you from a fall is not worth
+ * having.
+ *
+ * The budget refills on landing, and on a down-thrust bounce off an enemy's
+ * head, which is how the dash already works: bouncing is the game's reward
+ * for aiming, and taking the reward away mid-chain would be an odd thing to
+ * do. Walking off a ledge and jumping late spends the FIRST jump through the
+ * coyote grace above, so the air jump is still there afterwards.
+ */
+const AIR_JUMPS = 1;
+const AIR_JUMP_SCALE = 0.88;
 const JUMP_BUFFER = 0.12; // pressing jump slightly early still counts on landing
 const STEP = 1 / 120; // fixed physics step, independent of display refresh rate
 const MAX_CATCHUP = 0.25; // never simulate more than this after a stall
@@ -408,6 +424,8 @@ export class PlatformerEngine {
     lock: number;
     coyote: number;
     buffer: number;
+    /** jumps left before the ground is needed again */
+    airJumps: number;
     specialCd: number;
     charge: number;
     charging: boolean;
@@ -564,6 +582,7 @@ export class PlatformerEngine {
       lock: 0,
       coyote: 0,
       buffer: 0,
+      airJumps: AIR_JUMPS,
       specialCd: 0,
       charge: 0,
       charging: false,
@@ -938,6 +957,19 @@ export class PlatformerEngine {
       p.state = "jump";
       this.audio.play("jump");
       this.puff(p.x, p.y + p.h / 2, 5, "#cfe9ff");
+    } else if (
+      p.buffer > 0 && p.airJumps > 0 && !p.onGround
+      && p.dash <= 0 && p.state !== "hurt" && p.state !== "attack"
+    ) {
+      p.airJumps--;
+      p.vy = -JUMP_SPEED * AIR_JUMP_SCALE;
+      p.buffer = 0;
+      p.state = "jump";
+      // the animation is restarted by hand: it is already playing, and a
+      // second jump that does not visibly happen reads as a dropped input
+      p.anim.play("jump", true);
+      this.audio.play("airJump");
+      this.puff(p.x, p.y + p.h / 2, 9, "#cfe9ff");
     }
     if (p.vy < 0 && !this.held.has("jump")) p.vy += GRAVITY * JUMP_CUT * dt;
 
@@ -948,6 +980,7 @@ export class PlatformerEngine {
     moveBody(this.level, p, dt, this.held.has("down") && p.state !== "attack");
     if (wasAir && p.onGround) {
       p.dashReady = true;
+      p.airJumps = AIR_JUMPS;
       this.audio.play("land");
       this.puff(p.x, p.y + p.h / 2, 6, "#cfe9ff");
     }
@@ -1100,6 +1133,7 @@ export class PlatformerEngine {
     p.attack = null;
     p.attackHit = true;
     p.dashReady = true;
+    p.airJumps = AIR_JUMPS;
     p.coyote = 0;
     this.hitstop = 0.07;
     this.shake = Math.max(this.shake, 4);

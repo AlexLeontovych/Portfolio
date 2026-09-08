@@ -161,8 +161,8 @@ export const dict = {
       stat_power: "Power",
       stat_reach: "Reach",
       stat_tough: "Tough",
-      controls: "A D / ← → — move · W or Space — jump · S — drop through · Q — light · E — heavy · R — special · Shift — dash · S + Q in the air — down-thrust · Esc — pause",
-      controls_touch: "Left pad — move and duck · ⤒ — jump · » — dash · ⚔ ✹ ✦ — attacks · ▼ + ⚔ in the air — down-thrust",
+      controls: "A D / ← → — move · W or Space — jump, again in the air for a second · S — drop through · Q — light · E — heavy · R — special · Shift — dash · S + Q in the air — down-thrust · Esc — pause",
+      controls_touch: "Left pad — move and duck · ⤒ — jump, twice for a second in the air · » — dash · ⚔ ✹ ✦ — attacks · ▼ + ⚔ in the air — down-thrust",
     },
     td: {
       tagline: "Five maps, five towers, three ways to have a bad time. Hold the road.",
@@ -451,8 +451,8 @@ export const dict = {
       stat_power: "Сила",
       stat_reach: "Дальность",
       stat_tough: "Живучесть",
-      controls: "A D / ← → — идти · W или Пробел — прыжок · S — вниз сквозь платформу · Q — лёгкий · E — тяжёлый · R — спецудар · Shift — рывок · S + Q в воздухе — удар вниз · Esc — пауза",
-      controls_touch: "Слева — движение и вниз · ⤒ — прыжок · » — рывок · ⚔ ✹ ✦ — удары · ▼ + ⚔ в воздухе — удар вниз",
+      controls: "A D / ← → — идти · W или Пробел — прыжок, ещё раз в воздухе — второй · S — вниз сквозь платформу · Q — лёгкий · E — тяжёлый · R — спецудар · Shift — рывок · S + Q в воздухе — удар вниз · Esc — пауза",
+      controls_touch: "Слева — движение и вниз · ⤒ — прыжок, дважды — второй в воздухе · » — рывок · ⚔ ✹ ✦ — удары · ▼ + ⚔ в воздухе — удар вниз",
     },
     td: {
       tagline: "Пять карт, пять башен, три способа огрести. Держи дорогу.",
@@ -741,8 +741,8 @@ export const dict = {
       stat_power: "Сила",
       stat_reach: "Дистанція",
       stat_tough: "Живучість",
-      controls: "A D / ← → — рух · W або Пробіл — стрибок · S — вниз крізь платформу · Q — легкий · E — важкий · R — спецудар · Shift — ривок · S + Q у повітрі — удар вниз · Esc — пауза",
-      controls_touch: "Ліворуч — рух і вниз · ⤒ — стрибок · » — ривок · ⚔ ✹ ✦ — удари · ▼ + ⚔ у повітрі — удар вниз",
+      controls: "A D / ← → — рух · W або Пробіл — стрибок, ще раз у повітрі — другий · S — вниз крізь платформу · Q — легкий · E — важкий · R — спецудар · Shift — ривок · S + Q у повітрі — удар вниз · Esc — пауза",
+      controls_touch: "Ліворуч — рух і вниз · ⤒ — стрибок, двічі — другий у повітрі · » — ривок · ⚔ ✹ ✦ — удари · ▼ + ⚔ у повітрі — удар вниз",
     },
     td: {
       tagline: "П'ять карт, п'ять веж, три способи отримати. Тримай дорогу.",
